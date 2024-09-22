@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "commonjs",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "moduleResolution": "node"
+    },
+    "include": [
+        "./node_modules/@types",
+        "src/**/*",
+        "src/types/**/*",
+        "./**/*",
+        "./**/*.ts",
+        "app.ts",
+    ],
+    "exclude": ["node_modules"]
+}
