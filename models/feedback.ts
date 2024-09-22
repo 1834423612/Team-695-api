@@ -1,14 +1,12 @@
+
 export interface Feedback {
-    nickname: string;
-    category: string;
-    title: string;
-    contact: string;
-    content: string;
+    id?: number;
+    userId: number;
+    message: string;
     deviceInfo: {
         userAgent: string;
         ip: string;
         screenSize: string;
         language: string;
-    };
-    timestamp: string;
+    } | string;
 }
