@@ -42,9 +42,12 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (feedback: any) => {
     const htmlContent = loadTemplate(feedback);
 
+    // 将管理员邮箱转换为数组，以便发送给多个管理员
+    const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: process.env.ADMIN_EMAIL, // 管理员邮箱
+        to: adminEmails, // 管理员邮箱
         subject: `[695 Website] New Message from ${feedback.nickname}`,
         html: htmlContent,
     };
