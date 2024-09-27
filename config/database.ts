@@ -1,4 +1,4 @@
-import mysql from 'mysql2';
+import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 // 导入 .env 变量
@@ -13,17 +13,16 @@ const pool = mysql.createPool({
 });
 
 // 定时刷新连接，防止长时间不活跃导致连接关闭
-setInterval(() => {
+setInterval(async () => {
     const startTime = new Date();
-    pool.query('SELECT 1', (err) => {
+    try {
+        await pool.query('SELECT 1');
         const endTime = new Date();
         const executionTime = endTime.getTime() - startTime.getTime();
-        if (err) {
-            console.error(`[${startTime.toISOString()}] Keep-alive query failed:`, err);
-        } else {
-            console.log(`[${startTime.toISOString()}] Keep-alive query executed successfully in ${executionTime}ms`);
-        }
-    });
+        console.log(`[${startTime.toISOString()}] Keep-alive query executed successfully in ${executionTime}ms`);
+    } catch (err) {
+        console.error(`[${startTime.toISOString()}] Keep-alive query failed:`, err);
+    }
 }, 3600000); // 每小时执行一次
 
 export default pool;
