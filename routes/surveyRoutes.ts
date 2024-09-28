@@ -32,8 +32,8 @@ router.post('/submit', async (req, res) => {
             const tabImages = images || { fullRobotImages: [], driveTrainImages: [] };
 
             // 添加日志检查图像数据
-            console.log('Form Data:', formData);
-            console.log('Images:', tabImages);
+            // console.log('Form Data:', formData);
+            // console.log('Images:', tabImages);
 
             await pool.query(
                 'INSERT INTO survey_responses (event_id, form_id, data, upload, timestamp) VALUES (?, ?, ?, ?, NOW())',
