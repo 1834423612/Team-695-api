@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { S3Client, PutObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, ObjectCannedACL, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '../config/database'; // 引入数据库连接池
@@ -61,6 +61,43 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     } catch (error) {
         console.error('Error uploading image:', error);
         res.status(500).json({ error: 'Failed to upload image' });
+    }
+});
+
+// 删除图片的 API
+router.delete('/images/:imageId', async (req, res) => {
+    const { imageId } = req.params;
+
+    try {
+        // 从数据库中获取图片的 URL
+        const [rows]: any = await pool.query('SELECT upload FROM survey_responses WHERE JSON_CONTAINS(upload, ?)', [JSON.stringify({ url: imageId })]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Image not found' });
+        }
+
+        const imageUrl = rows[0].upload.fullRobotImages.find((img: any) => img.url === imageId) || rows[0].upload.driveTrainImages.find((img: any) => img.url === imageId);
+        if (!imageUrl) {
+            return res.status(404).json({ error: 'Image not found in the specified type' });
+        }
+
+        const fileKey = imageUrl.url.split(`${process.env.CUSTOM_DOMAIN}/`)[1];
+
+        // 从 Cloudflare R2 中删除图片
+        const deleteParams = {
+            Bucket: process.env.R2_BUCKET_NAME!,
+            Key: fileKey,
+        };
+
+        const deleteCommand = new DeleteObjectCommand(deleteParams);
+        await s3Client.send(deleteCommand);
+
+        // 从数据库中删除图片记录
+        await pool.query('UPDATE survey_responses SET upload = JSON_REMOVE(upload, ?) WHERE JSON_CONTAINS(upload, ?)', [`$.fullRobotImages[${rows[0].upload.fullRobotImages.indexOf(imageUrl)}]`, JSON.stringify({ url: imageId })]);
+
+        res.status(200).json({ message: 'Image deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).json({ error: 'Failed to delete image' });
     }
 });
 

@@ -27,9 +27,11 @@ router.post('/submit', async (req, res) => {
                 return acc;
             }, {});
 
+            const images = tab.images;
+
             await pool.query(
                 'INSERT INTO survey_responses (event_id, form_id, data, upload, timestamp) VALUES (?, ?, ?, ?, NOW())',
-                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(tab.images)]
+                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(images)]
             );
         }
 
