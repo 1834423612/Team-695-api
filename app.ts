@@ -18,7 +18,7 @@ app.use('/api/event', eventRoutes);
 app.use('/api/survey', surveyRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/feedback', feedbackRoutes);
+app.use('/api', feedbackRoutes);
 
 // 如果您的应用运行在一个反向代理后（如 Nginx），使用下面的行
 if (process.env.NODE_ENV === 'production') {
