@@ -3,6 +3,7 @@ import multer from 'multer';
 import { S3Client, PutObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import pool from '../config/database'; // 引入数据库连接池
 
 dotenv.config();
 
@@ -29,7 +30,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const { type, eventId } = req.body;
+        const { type } = req.body;
+
+        // 从数据库获取最新的 eventId
+        const [rows]: any = await pool.query('SELECT event_id FROM events ORDER BY event_date DESC LIMIT 1');
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+        const eventId = rows[0].event_id;
+
         const date = new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
