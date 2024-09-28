@@ -15,13 +15,15 @@ CREATE TABLE events (
     id INT AUTO_INCREMENT PRIMARY KEY,
     event_id VARCHAR(255) NOT NULL,
     event_name VARCHAR(255) NOT NULL,
-    event_date DATE NOT NULL
+    event_date DATE NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
     team_number VARCHAR(255) NOT NULL,
-    team_name VARCHAR(255) NOT NULL
+    team_name VARCHAR(255) NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE survey_responses (
