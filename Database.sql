@@ -32,5 +32,9 @@ CREATE TABLE survey_responses (
     form_id VARCHAR(255) NOT NULL,
     data JSON,
     upload JSON,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    user_agent VARCHAR(255),
+    ip VARCHAR(45),
+    language VARCHAR(10),
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(event_id)
 );

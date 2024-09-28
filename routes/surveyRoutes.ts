@@ -19,7 +19,7 @@ interface Images {
 }
 
 router.post('/submit', async (req, res) => {
-    const { eventId, tabs, images }: { eventId: string; tabs: Tab[]; images: Images } = req.body;
+    const { eventId, tabs, images, deviceInfo }: { eventId: string; tabs: Tab[]; images: Images; deviceInfo: any } = req.body;
 
     try {
         for (const tab of tabs) {
@@ -31,13 +31,11 @@ router.post('/submit', async (req, res) => {
             // 确保 images 数据存在
             const tabImages = images || { fullRobotImages: [], driveTrainImages: [] };
 
-            // 添加日志检查图像数据
-            // console.log('Form Data:', formData);
-            // console.log('Images:', tabImages);
+            const { userAgent, ip, language } = deviceInfo;
 
             await pool.query(
-                'INSERT INTO survey_responses (event_id, form_id, data, upload, timestamp) VALUES (?, ?, ?, ?, NOW())',
-                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(tabImages)]
+                'INSERT INTO survey_responses (event_id, form_id, data, upload, user_agent, ip, language, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(tabImages), userAgent, ip, language]
             );
         }
 
@@ -59,7 +57,7 @@ router.post('/submit', async (req, res) => {
 router.get('/query', async (req, res) => {
     const { eventId, formId, teamNumber } = req.query;
 
-    let query = 'SELECT * FROM survey_responses WHERE 1=1';
+    let query = 'SELECT id, event_id, form_id, data, upload, timestamp FROM survey_responses WHERE 1=1';
     const queryParams: any[] = [];
 
     if (eventId) {
