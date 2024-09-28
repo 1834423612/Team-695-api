@@ -5,10 +5,6 @@ const router = express.Router();
 interface Tab {
     formId: string;
     formData: any;
-    images: {
-        fullRobotImages: ImageData[];
-        driveTrainImages: ImageData[];
-    };
 }
 
 interface ImageData {
@@ -17,8 +13,13 @@ interface ImageData {
     size: number;
 }
 
+interface Images {
+    fullRobotImages: ImageData[];
+    driveTrainImages: ImageData[];
+}
+
 router.post('/submit', async (req, res) => {
-    const { eventId, tabs }: { eventId: string; tabs: Tab[] } = req.body;
+    const { eventId, tabs, images }: { eventId: string; tabs: Tab[]; images: Images } = req.body;
 
     try {
         for (const tab of tabs) {
@@ -27,11 +28,16 @@ router.post('/submit', async (req, res) => {
                 return acc;
             }, {});
 
-            const images = tab.images;
+            // 确保 images 数据存在
+            const tabImages = images || { fullRobotImages: [], driveTrainImages: [] };
+
+            // 添加日志检查图像数据
+            console.log('Form Data:', formData);
+            console.log('Images:', tabImages);
 
             await pool.query(
                 'INSERT INTO survey_responses (event_id, form_id, data, upload, timestamp) VALUES (?, ?, ?, ?, NOW())',
-                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(images)]
+                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(tabImages)]
             );
         }
 
