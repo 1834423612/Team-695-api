@@ -18,8 +18,8 @@
               class="px-4 py-2 rounded-md text-sm font-medium"
               :class="
                 currentTab === index
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-blue-100 text-blue-600 border-2 border-blue-500'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border-2 border-gray-400'
               "
             >
               {{ tab.name }}
@@ -31,7 +31,7 @@
             </button>
             <button
               @click="addTab"
-              class="ml-2 px-4 py-2 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200"
+              class="ml-2 px-4 py-2 rounded-md text-sm font-medium border-2 border-green-500 bg-green-100 text-green-700 hover:bg-green-200"
             >
               <Icon icon="mdi:plus" class="w-5 h-5 mr-1 inline-block" />
               Add Tab
@@ -41,10 +41,17 @@
           <div class="mt-2">
             <button
               @click="confirmClearCurrentTab"
-              class="px-4 py-2 rounded-md text-sm font-medium bg-red-100 text-red-600 hover:bg-red-200"
+              class="px-4 py-2 rounded-md text-sm font-medium border-2 border-red-500 bg-red-100 text-red-600 hover:bg-red-200"
             >
               <Icon icon="mdi:refresh" class="mr-2 inline-block" />
               Clear Current Tab
+            </button>
+            <button
+              v-if="showDebugButton"
+              class="ml-2 px-4 py-2 rounded-md text-sm font-medium border-4 border-amber-500/100 bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+              @click="confirmDebugAction"
+            >
+              Debug
             </button>
           </div>
         </div>
@@ -207,7 +214,7 @@
                   type="text"
                   v-model="field.value"
                   :required="field.required"
-                  @input="searchTeams"
+                  @input="handleTeamNumberInput"
                   @blur="hideTeamSuggestions"
                   class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   :class="{ 'border-red-500': field.error }"
@@ -434,6 +441,16 @@ interface ImageData {
   size: number;
 }
 
+interface Team {
+  team_number: string;
+  team_name: string;
+}
+
+interface FormField {
+  value: any;
+  error?: string;
+}
+
 const tabs = ref<Tab[]>([{ name: "Tab 1", formData: [], formId: uuidv4() }]);
 const currentTab = ref(0);
 const eventId = ref("");
@@ -573,30 +590,73 @@ const fullRobotImages = ref<ImageData[]>([]);
 const driveTrainImages = ref<ImageData[]>([]);
 const teamSuggestions = ref<any[]>([]);
 const showTeamSuggestions = ref(false);
+const showDebugButton = ref(false);
 
 onMounted(async () => {
   await loadTeams();
   await loadEventId();
-  loadFromLocalStorage();
+  const isNewUser = !localStorage.getItem("surveyTabs");
+  if (isNewUser) {
+    saveToLocalStorage();
+  } else {
+    loadFromLocalStorage();
+  }
 });
 
-const loadTeams = async () => {
-  try {
-    const response = await fetch(
-      "https://crispy-fiesta-64xrpg967gwf57xr-3000.app.github.dev/api/team/teams"
-    );
-    const data = await response.json();
-    teamSuggestions.value = data;
-  } catch (error) {
-    console.error("Error loading teams:", error);
+const checkDebugInput = () => {
+  const teamNumberField = formFields.value.find(field => field.question === 'Team number');
+  if (teamNumberField) {
+    showDebugButton.value = teamNumberField.value === 'debug';
   }
+};
+
+const handleTeamNumberInput = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const teamNumberField = formFields.value.find(field => field.question === 'Team number');
+  if (teamNumberField) {
+    teamNumberField.value = input.value;
+  }
+  checkDebugInput();
+  searchTeams();
+};
+
+const confirmDebugAction = () => {
+  Swal.fire({
+    title: "Debug Action",
+    text: "Are you sure you want to clear all local storage and cache? This action cannot be undone.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, clear it!",
+    reverseButtons: true,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      clearLocalStorageAndRefresh();
+    }
+  });
+};
+
+const clearLocalStorageAndRefresh = () => {
+  // 清除所有 localStorage 内容
+  localStorage.clear();
+
+  // 清除缓存
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      names.forEach((name) => {
+        caches.delete(name);
+      });
+    });
+  }
+
+  // 强制刷新页面
+  location.reload();
 };
 
 const loadEventId = async () => {
   try {
-    const response = await fetch(
-      "https://crispy-fiesta-64xrpg967gwf57xr-3000.app.github.dev/api/event/event-id"
-    );
+    const response = await fetch("https://api.frc695.com/api/event/event-id");
     const data = await response.json();
     eventId.value = data.eventId;
   } catch (error) {
@@ -637,6 +697,7 @@ const addTab = () => {
   };
   tabs.value.push(newTab);
   switchTab(tabs.value.length - 1);
+  saveToLocalStorage(); // 确保新标签页添加后立即保存到本地存储
 };
 
 const confirmRemoveTab = (index: number) => {
@@ -671,25 +732,28 @@ const confirmRemoveTab = (index: number) => {
 };
 
 const removeTab = (index: number) => {
-  if (tabs.value.length > 1) {
-    const removedTab = tabs.value[index];
-    tabs.value.splice(index, 1);
-    if (currentTab.value >= tabs.value.length) {
-      currentTab.value = tabs.value.length - 1;
-    }
-    switchTab(currentTab.value);
+  const removedTab = tabs.value[index];
+  tabs.value.splice(index, 1);
 
-    // Remove localStorage data for the deleted tab
-    localStorage.removeItem(`formData_${removedTab.formId}`);
-    localStorage.removeItem(`fullRobotImages_${removedTab.formId}`);
-    localStorage.removeItem(`driveTrainImages_${removedTab.formId}`);
+  if (tabs.value.length === 0) {
+    addTab();
+  } else if (currentTab.value >= tabs.value.length) {
+    currentTab.value = tabs.value.length - 1;
   }
+
+  switchTab(currentTab.value);
+
+  // Remove localStorage data for the deleted tab
+  localStorage.removeItem(`formData_${removedTab.formId}`);
+  localStorage.removeItem(`fullRobotImages_${removedTab.formId}`);
+  localStorage.removeItem(`driveTrainImages_${removedTab.formId}`);
 };
 
 const switchTab = (index: number) => {
   currentTab.value = index;
-  formFields.value = tabs.value[index].formData;
+  formFields.value = JSON.parse(JSON.stringify(tabs.value[index].formData));
   loadImagesFromLocalStorage();
+  checkDebugInput();
 };
 
 const confirmClearCurrentTab = () => {
@@ -764,6 +828,16 @@ const selectTeam = (team: Team) => {
 //   showTeamSuggestions.value = teamSuggestions.value.length > 0
 // }
 
+const loadTeams = async () => {
+  try {
+    const response = await fetch("https://api.frc695.com/api/team/teams");
+    const data = await response.json();
+    teamSuggestions.value = data;
+  } catch (error) {
+    console.error("Error loading teams:", error);
+  }
+};
+
 const hideTeamSuggestions = () => {
   setTimeout(() => {
     showTeamSuggestions.value = false;
@@ -817,13 +891,10 @@ const uploadImage = async (type: "fullRobot" | "driveTrain", file: File) => {
   formData.append("type", type);
 
   try {
-    const response = await fetch(
-      "https://crispy-fiesta-64xrpg967gwf57xr-3000.app.github.dev/api/upload/upload",
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
+    const response = await fetch("https://api.frc695.com/api/upload/upload", {
+      method: "POST",
+      body: formData,
+    });
     const data = await response.json();
     const imageData: ImageData = {
       url: data.url,
@@ -1012,29 +1083,44 @@ const confirmSubmitForm = () => {
 
 const submitForm = async () => {
   try {
-    const response = await fetch(
-      "https://crispy-fiesta-64xrpg967gwf57xr-3000.app.github.dev/api/survey/submit",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          eventId: eventId.value,
-          tabs: tabs.value,
-        }),
-      }
-    );
+    // 处理包含 "Other" 选项的字段
+    const processedTabs = tabs.value.map((tab) => {
+      const processedFormData = tab.formData.map((field) => {
+        if (field.type === "radio" || field.type === "checkbox") {
+          if (Array.isArray(field.value)) {
+            field.value = field.value.map((val) =>
+              val === "Other" ? field.otherValue : val
+            );
+          } else if (field.value === "Other") {
+            field.value = field.otherValue;
+          }
+        }
+        return field;
+      });
+      return { ...tab, formData: processedFormData };
+    });
+
+    const response = await fetch("https://api.frc695.com/api/survey/submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        eventId: eventId.value,
+        tabs: processedTabs,
+      }),
+    });
+
     const data = await response.json();
     if (response.ok) {
       console.log("Form submitted:", data);
 
-      // Clear local storage after successful submission
+      // 清除本地存储中的表单数据和图片数据
       localStorage.removeItem(`formData_${currentFormId.value}`);
       localStorage.removeItem(`fullRobotImages_${currentFormId.value}`);
       localStorage.removeItem(`driveTrainImages_${currentFormId.value}`);
 
-      // Reset form fields and images
+      // 重置表单字段和图片
       formFields.value = formFields.value.map((field) => ({
         ...field,
         value: null,
@@ -1043,10 +1129,10 @@ const submitForm = async () => {
       fullRobotImages.value = [];
       driveTrainImages.value = [];
 
-      // Show success message
+      // 显示成功消息
       Swal.fire("Success!", "Form submitted successfully!", "success");
 
-      // 删除当前的 tab 和 tab 对应的所有内容
+      // 删除当前标签页及其所有内容
       removeTab(currentTab.value);
     } else {
       throw new Error(data.error || "Failed to submit form");

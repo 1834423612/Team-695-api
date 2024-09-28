@@ -29,7 +29,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const fileKey = `${process.env.UPLOAD_DIR}/${uuidv4()}-${req.file.originalname}`;
+        const { type, eventId } = req.body;
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const fileKey = `${process.env.UPLOAD_DIR}/${year}/${type}/${year}-${month}-${day}_${eventId}_${uuidv4()}_${req.file.originalname}`;
+
         const params = {
             Bucket: process.env.R2_BUCKET_NAME!,
             Key: fileKey,
