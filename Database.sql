@@ -15,7 +15,7 @@ CREATE TABLE events (
     event_name VARCHAR(255) NOT NULL,
     event_date DATE NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE INDEX (event_id) -- 为 event_id 添加唯一索引
+    UNIQUE INDEX (event_id)
 );
 
 CREATE TABLE teams (
