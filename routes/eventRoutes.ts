@@ -4,7 +4,10 @@ const router = express.Router();
 
 router.get('/event-id', async (req, res) => {
     try {
-        const [rows]: any = await pool.query('SELECT event_id FROM events LIMIT 1');
+        const [rows]: any = await pool.query(
+            'SELECT event_id FROM events ORDER BY id DESC LIMIT 1'
+        );
+
         if (rows.length > 0) {
             res.json({ eventId: rows[0].event_id });
         } else {
