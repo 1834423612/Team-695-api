@@ -24,16 +24,16 @@ interface Images {
         eventId: string; // 事件 ID
         tabs: Tab[]; // 表单数据数组，每个表单包含 formId 和 formData
         images: Images; // 图片数据，包含 fullRobotImages 和 driveTrainImages
-        deviceInfo: any; // 设备信息，包括 userAgent、ip 和 language
         userData: { username: string; displayName: string; userId: string }; // 用户数据，包括用户名、显示名称和用户 ID
+        deviceInfo: any; // 设备信息，包括 userAgent、ip 和 language
 */
 router.post('/submit', async (req, res) => {
-    const { eventId, tabs, images, deviceInfo, userData }: { 
+    const { eventId, tabs, images, userData, deviceInfo }: { 
         eventId: string; 
         tabs: Tab[]; 
         images: Images; 
+        userData: { username: string; displayName: string; userId: string; };
         deviceInfo: any; 
-        userData: { username: string; displayName: string; userId: string; } 
     } = req.body;
 
     try {
@@ -49,16 +49,16 @@ router.post('/submit', async (req, res) => {
             const { userAgent, ip, language } = deviceInfo;
 
             await pool.query(
-                'INSERT INTO survey_responses (event_id, form_id, data, upload, user_agent, ip, language, user_data, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                'INSERT INTO survey_responses (event_id, form_id, data, upload, user_data, user_agent, ip, language, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
                 [
                     eventId, 
                     tab.formId, 
                     JSON.stringify(formData), 
                     JSON.stringify(tabImages), 
+                    JSON.stringify(userData),
                     userAgent, 
                     ip, 
-                    language, 
-                    JSON.stringify(userData)
+                    language
                 ]
             );
         }
