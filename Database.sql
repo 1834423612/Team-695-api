@@ -31,6 +31,7 @@ CREATE TABLE survey_responses (
     form_id VARCHAR(255) NOT NULL,
     data JSON,
     upload JSON,
+    user_data JSON,
     user_agent VARCHAR(255),
     ip VARCHAR(45),
     language VARCHAR(10),
