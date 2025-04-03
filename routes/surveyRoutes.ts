@@ -81,7 +81,7 @@ router.post('/submit', async (req, res) => {
 router.get('/query', async (req, res) => {
     const { eventId, formId, teamNumber } = req.query;
 
-    let query = 'SELECT id, event_id, form_id, data, upload, user_data, timestamp FROM survey_responses WHERE 1=1';
+    let query = 'SELECT id, event_id, form_id, data, upload, user_data, user_agent, ip, language, timestamp FROM survey_responses WHERE 1=1';
     const queryParams: any[] = [];
 
     if (eventId) {
