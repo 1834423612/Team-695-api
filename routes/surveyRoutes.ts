@@ -18,8 +18,23 @@ interface Images {
     driveTrainImages: ImageData[];
 }
 
+// 提交问卷 API
+/*
+    调用提交 API：使用 POST 方法调用 /api/survey/submit 端点，传递以下参数：
+        eventId: string; // 事件 ID
+        tabs: Tab[]; // 表单数据数组，每个表单包含 formId 和 formData
+        images: Images; // 图片数据，包含 fullRobotImages 和 driveTrainImages
+        deviceInfo: any; // 设备信息，包括 userAgent、ip 和 language
+        userData: { username: string; displayName: string; userId: string }; // 用户数据，包括用户名、显示名称和用户 ID
+*/
 router.post('/submit', async (req, res) => {
-    const { eventId, tabs, images, deviceInfo }: { eventId: string; tabs: Tab[]; images: Images; deviceInfo: any } = req.body;
+    const { eventId, tabs, images, deviceInfo, userData }: { 
+        eventId: string; 
+        tabs: Tab[]; 
+        images: Images; 
+        deviceInfo: any; 
+        userData: { username: string; displayName: string; userId: string; } 
+    } = req.body;
 
     try {
         for (const tab of tabs) {
@@ -34,8 +49,17 @@ router.post('/submit', async (req, res) => {
             const { userAgent, ip, language } = deviceInfo;
 
             await pool.query(
-                'INSERT INTO survey_responses (event_id, form_id, data, upload, user_agent, ip, language, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
-                [eventId, tab.formId, JSON.stringify(formData), JSON.stringify(tabImages), userAgent, ip, language]
+                'INSERT INTO survey_responses (event_id, form_id, data, upload, user_agent, ip, language, user_data, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                [
+                    eventId, 
+                    tab.formId, 
+                    JSON.stringify(formData), 
+                    JSON.stringify(tabImages), 
+                    userAgent, 
+                    ip, 
+                    language, 
+                    JSON.stringify(userData)
+                ]
             );
         }
 
@@ -57,7 +81,7 @@ router.post('/submit', async (req, res) => {
 router.get('/query', async (req, res) => {
     const { eventId, formId, teamNumber } = req.query;
 
-    let query = 'SELECT id, event_id, form_id, data, upload, timestamp FROM survey_responses WHERE 1=1';
+    let query = 'SELECT id, event_id, form_id, data, upload, user_data, timestamp FROM survey_responses WHERE 1=1';
     const queryParams: any[] = [];
 
     if (eventId) {
