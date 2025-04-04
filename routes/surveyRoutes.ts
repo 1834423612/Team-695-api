@@ -24,7 +24,7 @@ interface Images {
         eventId: string; // 事件 ID
         tabs: Tab[]; // 表单数据数组，每个表单包含 formId 和 formData
         images: Images; // 图片数据，包含 fullRobotImages 和 driveTrainImages
-        userData: { username: string; displayName: string; userId: string }; // 用户数据，包括用户名、显示名称和用户 ID
+        userData: { email: string; avatar: string; userId: string; username: string; displayName: string; }; // User Data, Including email、avatar、userId、username and displayName
         deviceInfo: any; // 设备信息，包括 userAgent、ip 和 language
 */
 router.post('/submit', async (req, res) => {
@@ -32,7 +32,7 @@ router.post('/submit', async (req, res) => {
         eventId: string; 
         tabs: Tab[]; 
         images: Images; 
-        userData: { username: string; displayName: string; userId: string; };
+        userData: { email: string; avatar: string; userId: string; username: string; displayName: string; };
         deviceInfo: any; 
     } = req.body;
 

@@ -4,13 +4,124 @@ info:
   version: 1.0.0
   description: API documentation for managing events, surveys, teams, uploads, and feedback.
 servers:
-  - url: http://localhost:3000/api
-    description: Development server
   - url: https://api.team695.com
     description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+tags: 
+  - name: Auth
+    description: APIs related to authentication and authorization
+  - name: Events
+    description: APIs related to event management
+  - name: Surveys
+    description: APIs related to survey submissions and queries
+  - name: Teams
+    description: APIs related to team information
+  - name: Uploads
+    description: APIs for uploading and managing files
+  - name: Feedback
+    description: APIs for submitting feedback
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 paths:
+  /auth/callback:
+    post:
+      tags:
+        - Auth
+      summary: Handle Casdoor callback
+      description: Exchange the authorization code for an access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: The authorization code from Casdoor.
+      responses:
+        200:
+          description: Successfully exchanged the code for a token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: The access token.
+        400:
+          description: Authorization code is required.
+        500:
+          description: Failed to process authentication.
+
+  /auth/user:
+    get:
+      tags:
+        - Auth
+      summary: Get user info
+      description: Retrieve user information from the access token.
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Successfully retrieved user info.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  email:
+                    type: string
+        401:
+          description: Not authenticated.
+        500:
+          description: Failed to get user info.
+
+  /auth/users:
+    get:
+      tags:
+        - Auth
+      summary: Get all users
+      description: Retrieve all users (admin only).
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Successfully retrieved all users.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    email:
+                      type: string
+        401:
+          description: Not authenticated.
+        403:
+          description: Forbidden (admin only).
+        500:
+          description: Failed to get users.
+
   /event/event-id:
     get:
+      tags:
+        - Events
       summary: Get the latest event ID
       description: Fetch the most recent event ID from the database.
       responses:
@@ -30,6 +141,8 @@ paths:
 
   /survey/submit:
     post:
+      tags:
+        - Surveys
       summary: Submit a survey
       description: Submit survey data to the database.
       requestBody:
@@ -85,11 +198,15 @@ paths:
                 userData:
                   type: object
                   properties:
+                    email:
+                      type: string
+                    avatar:
+                      type: string
+                    userId:
+                      type: string
                     username:
                       type: string
                     displayName:
-                      type: string
-                    userId:
                       type: string
                 deviceInfo:
                   type: object
@@ -108,6 +225,8 @@ paths:
 
   /survey/query:
     get:
+      tags:
+        - Surveys
       summary: Query surveys
       description: Fetch survey data based on query parameters.
       parameters:
@@ -134,6 +253,8 @@ paths:
 
   /team/teams:
     get:
+      tags:
+        - Teams
       summary: Get all teams
       description: Fetch all teams from the database.
       responses:
@@ -155,6 +276,8 @@ paths:
 
   /upload/upload:
     post:
+      tags:
+        - Uploads
       summary: Upload an image
       description: Upload an image to Cloudflare R2 and store metadata in the database.
       requestBody:
@@ -188,6 +311,8 @@ paths:
 
   /upload/images/{imageId}:
     delete:
+      tags:
+        - Uploads
       summary: Delete an image
       description: Delete an image from Cloudflare R2 and update the database.
       parameters:
@@ -207,6 +332,8 @@ paths:
 
   /feedback/feedback:
     post:
+      tags:
+        - Feedback
       summary: Submit feedback
       description: Submit feedback with rate limiting.
       requestBody:
