@@ -1,6 +1,6 @@
 import express from 'express';
 import { submitFeedback } from '../controllers/feedbackController';
-import rateLimiter from '../middleware/rateLimiter';
+import rateLimiter from '../middlewares/rateLimiter';
 
 const router = express.Router();
 
