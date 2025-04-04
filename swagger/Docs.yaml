@@ -9,8 +9,8 @@ servers:
   - url: http://localhost:3000/api
     description: Development server
 tags: 
-  - name: Auth
-    description: APIs related to authentication and authorization
+  - name: Authentication
+    description: APIs related to user authentication and authorization
   - name: Events
     description: APIs related to event management
   - name: Surveys
@@ -22,101 +22,181 @@ tags:
   - name: Feedback
     description: APIs for submitting feedback
 components:
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        id_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+        scope:
+          type: string
+    
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        displayName:
+          type: string
+        avatar:
+          type: string
+        email:
+          type: string
+        isAdmin:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        groups:
+          type: array
+          items:
+            type: string
+  
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
 paths:
   /auth/callback:
     post:
       tags:
-        - Auth
-      summary: Handle Casdoor callback
-      description: Exchange the authorization code for an access token.
+        - Authentication
+      summary: Exchange authorization code for access token
+      description: Handles OAuth callback and exchanges the code for an access token
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - code
               properties:
                 code:
                   type: string
-                  description: The authorization code from Casdoor.
+                  description: Authorization code from Casdoor
+                state:
+                  type: string
+                  description: State parameter from OAuth flow
       responses:
-        200:
-          description: Successfully exchanged the code for a token.
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Server error
+
+  /auth/refresh-token:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Uses a refresh token to get a new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh token
+      responses:
+        '200':
+          description: Successfully refreshed token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request
+        '500':
+          description: Server error
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user information
+      description: Returns information about the currently authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Invalidates the current session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
+
+  /auth/validate:
+    get:
+      tags:
+        - Authentication
+      summary: Validate token
+      description: Checks if the provided token is valid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token validation result
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  token:
-                    type: string
-                    description: The access token.
-        400:
-          description: Authorization code is required.
-        500:
-          description: Failed to process authentication.
-
-  /auth/user:
-    get:
-      tags:
-        - Auth
-      summary: Get user info
-      description: Retrieve user information from the access token.
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Successfully retrieved user info.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  email:
-                    type: string
-        401:
-          description: Not authenticated.
-        500:
-          description: Failed to get user info.
-
-  /auth/users:
-    get:
-      tags:
-        - Auth
-      summary: Get all users
-      description: Retrieve all users (admin only).
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Successfully retrieved all users.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    email:
-                      type: string
-        401:
-          description: Not authenticated.
-        403:
-          description: Forbidden (admin only).
-        500:
-          description: Failed to get users.
+                  valid:
+                    type: boolean
+                  isAdmin:
+                    type: boolean
+        '401':
+          description: Unauthorized
+        '500':
+          description: Server error
 
   /event/event-id:
     get:

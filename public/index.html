@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casdoor Authentication Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        #userInfo {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Casdoor Authentication Example</h1>
+
+    <div>
+        <button id="loginButton">Login with Casdoor</button>
+        <button id="logoutButton" style="display: none;">Logout</button>
+    </div>
+
+    <div id="userInfo"></div>
+
+    <script>
+        // Configuration
+        const casdoorEndpoint = 'https://door.casdoor.com';
+        const clientId = '014ae4bd048734ca2dea';
+        const redirectUri = encodeURIComponent(window.location.origin + '/callback');
+        const backendUrl = window.location.origin;
+
+        // DOM elements
+        const loginButton = document.getElementById('loginButton');
+        const logoutButton = document.getElementById('logoutButton');
+        const userInfoDiv = document.getElementById('userInfo');
+
+        // Check if we have a token in localStorage
+        const token = localStorage.getItem('casdoor_token');
+        if (token) {
+            loginButton.style.display = 'none';
+            logoutButton.style.display = 'inline-block';
+            fetchUserInfo(token);
+        }
+
+        // Handle the OAuth callback
+        if (window.location.pathname === '/callback') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+
+            if (code) {
+                // Exchange code for token
+                fetch(`${backendUrl}/api/login?code=${code}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.token) {
+                            localStorage.setItem('casdoor_token', data.token);
+                            window.location.href = '/';
+                        } else {
+                            userInfoDiv.textContent = 'Error: ' + (data.error || 'Failed to get token');
+                        }
+                    })
+                    .catch(error => {
+                        userInfoDiv.textContent = 'Error: ' + error.message;
+                    });
+            }
+        }
+
+        // Login button click handler
+        loginButton.addEventListener('click', () => {
+            const authUrl = `${casdoorEndpoint}/login/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=read&state=casdoor`;
+            window.location.href = authUrl;
+        });
+
+        // Logout button click handler
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('casdoor_token');
+            window.location.href = '/';
+        });
+
+        // Fetch user info from the backend
+        function fetchUserInfo(token) {
+            fetch(`${backendUrl}/api/getUserInfo?token=${token}`, {
+                credentials: 'include'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    userInfoDiv.textContent = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    userInfoDiv.textContent = 'Error fetching user info: ' + error.message;
+                });
+        }
+    </script>
+</body>
+
+</html>
