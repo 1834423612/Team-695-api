@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: Team 695 API
+  version: 1.0.0
+  description: API documentation for managing events, surveys, teams, uploads, and feedback.
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://api.team695.com
+    description: Production server
+paths:
+  /event/event-id:
+    get:
+      summary: Get the latest event ID
+      description: Fetch the most recent event ID from the database.
+      responses:
+        200:
+          description: Successfully fetched the event ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eventId:
+                    type: string
+        404:
+          description: Event not found.
+        500:
+          description: Failed to fetch event ID.
+
+  /survey/submit:
+    post:
+      summary: Submit a survey
+      description: Submit survey data to the database.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eventId:
+                  type: string
+                tabs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      formId:
+                        type: string
+                      formData:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            question:
+                              type: string
+                            value:
+                              type: string
+                images:
+                  type: object
+                  properties:
+                    fullRobotImages:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                          name:
+                            type: string
+                          size:
+                            type: number
+                    driveTrainImages:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                          name:
+                            type: string
+                          size:
+                            type: number
+                userData:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    displayName:
+                      type: string
+                    userId:
+                      type: string
+                deviceInfo:
+                  type: object
+                  properties:
+                    userAgent:
+                      type: string
+                    ip:
+                      type: string
+                    language:
+                      type: string
+      responses:
+        200:
+          description: Survey submitted successfully.
+        500:
+          description: Failed to submit survey.
+
+  /survey/query:
+    get:
+      summary: Query surveys
+      description: Fetch survey data based on query parameters.
+      parameters:
+        - in: query
+          name: eventId
+          schema:
+            type: string
+          description: Event ID
+        - in: query
+          name: formId
+          schema:
+            type: string
+          description: Form ID
+        - in: query
+          name: teamNumber
+          schema:
+            type: string
+          description: Team number
+      responses:
+        200:
+          description: Successfully fetched survey data.
+        500:
+          description: Failed to query survey responses.
+
+  /team/teams:
+    get:
+      summary: Get all teams
+      description: Fetch all teams from the database.
+      responses:
+        200:
+          description: Successfully fetched teams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    team_number:
+                      type: string
+                    team_name:
+                      type: string
+        500:
+          description: Failed to fetch teams.
+
+  /upload/upload:
+    post:
+      summary: Upload an image
+      description: Upload an image to Cloudflare R2 and store metadata in the database.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+      responses:
+        200:
+          description: Image uploaded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        400:
+          description: No file uploaded.
+        404:
+          description: Event not found.
+        500:
+          description: Failed to upload image.
+
+  /upload/images/{imageId}:
+    delete:
+      summary: Delete an image
+      description: Delete an image from Cloudflare R2 and update the database.
+      parameters:
+        - in: path
+          name: imageId
+          required: true
+          schema:
+            type: string
+          description: The ID of the image to delete.
+      responses:
+        200:
+          description: Image deleted successfully.
+        404:
+          description: Image not found.
+        500:
+          description: Failed to delete image.
+
+  /feedback/feedback:
+    post:
+      summary: Submit feedback
+      description: Submit feedback with rate limiting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feedback:
+                  type: string
+      responses:
+        200:
+          description: Feedback submitted successfully.
+        429:
+          description: Too many requests.
+        500:
+          description: Failed to submit feedback.
