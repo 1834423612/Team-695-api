@@ -1,5 +1,5 @@
 {
-  "name": "Team-695-api",
+  "name": "team-695-api",
   "version": "1.0.0",
   "description": "",
   "type": "commonjs",
@@ -23,6 +23,8 @@
     "multer": "1.4.5-lts.1",
     "mysql2": "^3.11.3",
     "nodemailer": "^6.9.15",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
@@ -33,6 +35,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.7.3",
     "@types/nodemailer": "^6.4.16",
+    "@types/swagger-ui-express": "^4.1.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"
   }
