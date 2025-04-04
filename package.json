@@ -25,7 +25,8 @@
     "nodemailer": "^6.9.15",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "yaml": "^2.7.1"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.5",
