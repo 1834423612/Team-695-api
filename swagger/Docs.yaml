@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: Team 695 API
-  description: Team 695 API Documentation for multiple services
+  description: Team 695 API Documentation for multiple services including authentication, events, surveys, teams, uploads, and feedback
   version: 1.0.0
 servers:
   - url: http://localhost:3000/api
@@ -28,6 +28,21 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        message:
+          type: string
+          description: Optional message providing additional information
+        data:
+          type: object
+          description: Response data (varies by endpoint)
+        error:
+          type: string
+          description: Error details (only in non-production environments)
     TokenResponse:
       type: object
       properties:
@@ -36,7 +51,7 @@ components:
           description: JWT Access Token
         refresh_token:
           type: string
-          description: JWT Refresh Token
+          description: JWT Refresh Token for obtaining a new access token
         token_type:
           type: string
           description: Token Type (usually "Bearer")
@@ -72,15 +87,6 @@ components:
           items:
             type: string
           description: User groups
-    Error:
-      type: object
-      properties:
-        message:
-          type: string
-          description: Error message
-        details:
-          type: string
-          description: Detailed error information
     DecodedToken:
       type: object
       properties:
@@ -89,14 +95,26 @@ components:
           properties:
             alg:
               type: string
+              description: Algorithm used for token signing
             kid:
               type: string
+              description: Key ID
             typ:
               type: string
+              description: Token type
         payload:
           $ref: '#/components/schemas/UserInfo'
         signature:
           type: string
+          description: Token signature
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token to exchange for a new access token
     FeedbackRequest:
       type: object
       properties:
@@ -254,19 +272,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResponse'
         '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /auth/user-info:
     get:
@@ -287,19 +310,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DecodedToken'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DecodedToken'
         '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /auth/me:
     get:
@@ -321,19 +349,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserInfo'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /auth/validate:
     get:
@@ -355,22 +388,102 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  valid:
-                    type: boolean
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          valid:
+                            type: boolean
+                          isAdmin:
+                            type: boolean
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/refresh-token:
+    post:
+      summary: Refresh access token
+      description: Use a refresh token to obtain a new access token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: Revoke the current token and log out the user
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
 
   /feedback:
     post:
@@ -390,22 +503,27 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
         '429':
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /upload/upload:
     post:
@@ -413,6 +531,8 @@ paths:
       description: Upload an image file to the server
       tags:
         - Uploads
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           multipart/form-data:
@@ -432,25 +552,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UploadResponse'
         '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '404':
           description: Event not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /upload/images/{imageId}:
     delete:
@@ -458,6 +589,8 @@ paths:
       description: Delete an uploaded image by ID
       tags:
         - Uploads
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: imageId
@@ -471,22 +604,33 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '404':
           description: Image not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /event/event-id:
     get:
@@ -500,19 +644,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EventResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EventResponse'
         '404':
           description: Event not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /team/teams:
     get:
@@ -526,15 +675,20 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TeamResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TeamResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /survey/submit:
     post:
@@ -542,6 +696,8 @@ paths:
       description: Submit a new survey response for an event
       tags:
         - Surveys
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -554,16 +710,27 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'
 
   /survey/query:
     get:
@@ -571,6 +738,8 @@ paths:
       description: Query survey responses with optional filtering
       tags:
         - Surveys
+      security:
+        - bearerAuth: []
       parameters:
         - in: query
           name: eventId
@@ -593,12 +762,23 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SurveyResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SurveyResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ApiResponse'

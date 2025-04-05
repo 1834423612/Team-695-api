@@ -1,5 +1,6 @@
 import type { Request, Response } from "express"
 import authService from "../services/authService"
+import { success, error, unauthorized } from "../utils/responses"
 
 class AuthController {
     /**
@@ -10,14 +11,14 @@ class AuthController {
             const code = req.query.code as string
 
             if (!code) {
-                return res.status(400).json({ message: "Authorization code required" })
+                return error(res, 400, "Authorization code required")
             }
 
             const tokenResponse = await authService.getAuthToken(code)
-            return res.status(200).json(tokenResponse)
-        } catch (error) {
-            console.error("Callback error:", error)
-            return res.status(500).json({ message: "Authentication failed" })
+            return success(res, tokenResponse)
+        } catch (err) {
+            console.error("Callback error:", err)
+            return error(res, 500, "Authentication failed", err)
         }
     }
 
@@ -26,84 +27,57 @@ class AuthController {
      */
     getCurrentUser(req: Request, res: Response) {
         try {
-            console.log("getCurrentUser endpoint called")
-            
             // First check if middleware has already set user information
             if (req.user) {
-                console.log("User information found in request object")
-                return res.status(200).json(req.user)
+                return success(res, req.user)
             }
-            
+
             // Try to get token from different sources
             let token: string | undefined
-            
+
             // Get from Authorization header
             const authHeader = req.headers.authorization
             if (authHeader) {
-                console.log("Getting token from Authorization header", { header: authHeader })
                 // Support tokens with or without Bearer prefix
-                token = authHeader.startsWith("Bearer ") 
+                token = authHeader.startsWith("Bearer ")
                     ? authHeader.slice(7) // Remove "Bearer " prefix
                     : authHeader
             }
-            
+
             // Get from query parameters
             if (!token && req.query.token) {
                 token = req.query.token as string
-                console.log("Getting token from query parameters", { token: token?.slice(0, 10) + "..." })
             }
-            
+
             // Get from request object
             if (!token && req.token) {
                 token = req.token
-                console.log("Getting token from request object", { token: token?.slice(0, 10) + "..." })
             }
-            
+
             if (!token) {
-                console.log("No token provided")
-                return res.status(401).json({ 
-                    message: "Unauthorized", 
-                    details: "Please provide a valid JWT token" 
-                })
+                return unauthorized(res, "Please provide a valid JWT token")
             }
-            
+
             // Try to parse the token
             try {
-                console.log("Parsing token")
                 const decodedToken = authService.parseJwtToken(token)
-                
+
                 // Validate token content
                 if (!decodedToken || !decodedToken.payload) {
-                    console.error("Token parsing succeeded but content is invalid")
-                    return res.status(401).json({ message: "Invalid token", details: "Token content is invalid" })
+                    return unauthorized(res, "Token content is invalid")
                 }
-                
-                // Log success information
-                console.log("Token validation successful, user:", {
-                    sub: decodedToken.payload.sub,
-                    name: decodedToken.payload.name,
-                    email: decodedToken.payload.email
-                })
-                
+
                 // Set user information to request object for future use
                 req.user = decodedToken.payload
                 req.token = token
                 req.decodedToken = decodedToken
-                
-                return res.status(200).json(decodedToken.payload)
+
+                return success(res, decodedToken.payload)
             } catch (tokenError) {
-                console.error("Token validation failed:", tokenError)
-                return res.status(401).json({ 
-                    message: "Invalid token", 
-                    details: (tokenError as Error).message 
-                })
+                return unauthorized(res, (tokenError as Error).message)
             }
-        } catch (error) {
-            console.error("Error handling request:", error)
-            return res.status(500).json({ 
-                message: "Failed to get user information", 
-                details: (error as Error).message
-            })
+        } catch (err) {
+            return error(res, 500, "Failed to get user information", err)
         }
     }
 
@@ -115,14 +89,13 @@ class AuthController {
             const token = req.query.token as string
 
             if (!token) {
-                return res.status(400).json({ message: "Token required" })
+                return error(res, 400, "Token required")
             }
 
             const userInfo = authService.parseJwtToken(token)
-            return res.status(200).json(userInfo)
-        } catch (error) {
-            console.error("Error getting user info:", error)
-            return res.status(500).json({ message: "Failed to get user information" })
+            return success(res, userInfo)
+        } catch (err) {
+            return error(res, 500, "Failed to get user information", err)
         }
     }
 
@@ -131,7 +104,49 @@ class AuthController {
      */
     validateToken(req: Request, res: Response) {
         // If we passed the verifyToken middleware, the token is valid
-        return res.status(200).json({ valid: true })
+        const isAdmin = req.user ? authService.isUserAdmin(req.decodedToken) : false
+        return success(res, { valid: true, isAdmin })
+    }
+
+    /**
+     * Refresh access token
+     */
+    async refreshToken(req: Request, res: Response) {
+        try {
+            const { refreshToken } = req.body
+
+            if (!refreshToken) {
+                return error(res, 400, "Refresh token required")
+            }
+
+            const tokenResponse = await authService.refreshToken(refreshToken)
+            return success(res, tokenResponse)
+        } catch (err) {
+            return error(res, 500, "Failed to refresh token", err)
+        }
+    }
+
+    /**
+     * Logout user by revoking token
+     */
+    async logout(req: Request, res: Response) {
+        try {
+            const token = req.token
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Revoke the token on Casdoor server
+            await authService.revokeToken(token)
+
+            return success(res, { message: "Logged out successfully" })
+        } catch (err) {
+            // Even if there's an error, we should return success to the client
+            // as we want them to clear their local token storage
+            console.error("Logout error:", err)
+            return success(res, { message: "Logged out successfully" })
+        }
     }
 }
 

@@ -17,4 +17,3 @@ export const jwtOptions = {
     issuer: process.env.JWT_ISSUER || casdoorConfig.endpoint,
     audience: process.env.JWT_AUDIENCE || casdoorConfig.clientId,
 }
-

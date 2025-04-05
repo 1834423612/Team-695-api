@@ -7,11 +7,13 @@ const router = Router()
 // Public routes
 router.post("/callback", authController.handleCallback)
 router.get("/user-info", authController.getUserInfoFromToken)
+router.post("/refresh-token", authController.refreshToken)
 
-// `/me` endpoint - won't use token verification middleware
+// Routes that handle their own authentication
 router.get("/me", authController.getCurrentUser)
 
-// `/validate` endpoint 
+// Protected routes
 router.get("/validate", verifyToken, authController.validateToken)
+router.post("/logout", verifyToken, authController.logout)
 
 export default router

@@ -1,4 +1,4 @@
-// 修改DecodedToken接口使其与casdoor-nodejs-sdk兼容
+// Define DecodedToken interface compatible with casdoor-nodejs-sdk
 export interface DecodedToken {
     header: {
         alg: string
@@ -17,7 +17,15 @@ export interface DecodedToken {
         groups?: string[]
         permissions?: string[]
         exp: number
-        iat?: number // 将iat设为可选属性，兼容casdoor-nodejs-sdk
+        iat?: number
     }
     signature: string
+}
+
+// Define API response structure
+export interface ApiResponse<T = any> {
+    success: boolean
+    message?: string
+    data?: T
+    error?: string
 }
