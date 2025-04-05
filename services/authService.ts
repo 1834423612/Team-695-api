@@ -2,6 +2,7 @@ import { SDK } from "casdoor-nodejs-sdk"
 import axios from "axios"
 import { casdoorConfig } from "../config/casdoor"
 import type { DecodedToken } from "../types"
+import tokenBlacklist from "./tokenBlacklistService"
 
 class AuthService {
     private sdk: SDK
@@ -26,21 +27,21 @@ class AuthService {
                 header: {
                     alg: result.header?.alg || "RS256",
                     kid: result.header?.kid || "default",
-                    typ: result.header?.typ || "JWT",
+                    typ: result.header?.typ || "JWT"
                 },
                 payload: {
-                    exp: typeof result.payload?.exp === "number" ? result.payload.exp : Math.floor(Date.now() / 1000) + 3600,
-                    sub: result.payload?.sub || result.id || result.name || "",
-                    name: result.payload?.name || result.name || "",
-                    email: result.payload?.email || result.email || "",
-                    preferred_username: result.payload?.preferred_username || result.username || result.name || "",
-                    owner: result.payload?.owner || result.owner || "",
-                    role: result.payload?.role || result.role || "",
+                    exp: typeof result.payload?.exp === 'number' ? result.payload.exp : Math.floor(Date.now() / 1000) + 3600,
+                    sub: result.payload?.sub || result.id || result.name || '',
+                    name: result.payload?.name || result.name || '',
+                    email: result.payload?.email || result.email || '',
+                    preferred_username: result.payload?.preferred_username || result.username || result.name || '',
+                    owner: result.payload?.owner || result.owner || '',
+                    role: result.payload?.role || result.role || '',
                     isAdmin: result.payload?.isAdmin || result.isAdmin || false,
                     // Add other possible fields
-                    ...(result.payload || result),
+                    ...(result.payload || result)
                 },
-                signature: result.signature || "",
+                signature: result.signature || ''
             }
 
             return decodedToken
@@ -101,39 +102,169 @@ class AuthService {
 
     /**
      * Revoke token to log out user
-     * This will invalidate the token on Casdoor server
+     * This will invalidate the token on Casdoor server and add it to our local blacklist
+     * It calls both logout and delete-token endpoints to ensure complete token revocation
      */
     async revokeToken(token: string) {
         try {
             // First try to get user info from token to ensure it's valid
-            const userInfo = this.parseJwtToken(token)
+            const decodedToken = this.parseJwtToken(token)
 
-            // Call Casdoor's logout endpoint to invalidate the token
-            const response = await axios.post(
-                `${casdoorConfig.endpoint}/api/logout`,
-                {
-                    // Include any required parameters for token revocation
-                    token: token,
-                    clientId: casdoorConfig.clientId,
-                    userId: userInfo.payload.sub || userInfo.payload.name,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
+            // Add token to blacklist immediately to prevent reuse
+            await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp)
+
+            // Extract user information needed for token revocation
+            const userId = decodedToken.payload.sub || decodedToken.payload.name || ''
+            const owner = decodedToken.payload.owner || casdoorConfig.orgName
+            const name = decodedToken.payload.name || decodedToken.payload.preferred_username || ''
+
+            // Track success of each operation
+            const results = {
+                localBlacklist: true,
+                casdoorLogout: false,
+                casdoorDeleteToken: false
+            }
+
+            // 1. Call Casdoor's logout endpoint
+            try {
+                const logoutResponse = await axios.post(
+                    `${casdoorConfig.endpoint}/api/logout`,
+                    {
+                        token: token,
+                        clientId: casdoorConfig.clientId,
+                        userId: userId
                     },
-                },
-            )
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                )
 
-            // Also add the token to a blacklist if needed
-            // This could be implemented with Redis or another fast storage
-            // await this.addToBlacklist(token, userInfo.payload.exp)
+                console.log("Casdoor logout response:", logoutResponse.data)
+                results.casdoorLogout = true
+            } catch (logoutError) {
+                console.error("Error calling Casdoor logout endpoint:", logoutError)
+            }
 
-            return response.data
+            // 2. Call Casdoor's delete-token endpoint with the exact format required by Casdoor
+            try {
+                // Prepare the delete token request according to Casdoor's API documentation
+                const deleteTokenPayload = {
+                    accessToken: token,
+                    accessTokenHash: "", // Optional
+                    application: casdoorConfig.appName,
+                    code: "", // Optional
+                    codeChallenge: "", // Optional
+                    codeExpireIn: 0, // Optional
+                    codeIsUsed: true, // Optional
+                    createdTime: new Date().toISOString(), // Current time
+                    expiresIn: decodedToken.payload.exp - Math.floor(Date.now() / 1000), // Time until expiration
+                    name: name || userId, // Use name or userId
+                    organization: casdoorConfig.orgName,
+                    owner: owner,
+                    refreshToken: "", // Optional
+                    refreshTokenHash: "", // Optional
+                    scope: "", // Optional
+                    tokenType: "Bearer", // Standard token type
+                    user: userId
+                }
+
+                // Log the payload for debugging
+                console.log("Delete token payload:", JSON.stringify(deleteTokenPayload, null, 2))
+
+                // Make the API call to delete the token
+                const deleteTokenResponse = await axios.post(
+                    `${casdoorConfig.endpoint}/api/delete-token`,
+                    deleteTokenPayload,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                )
+
+                console.log("Casdoor delete-token response:", deleteTokenResponse.data)
+
+                // Check if the token was actually deleted
+                if (deleteTokenResponse.data && deleteTokenResponse.data.data !== "Unaffected") {
+                    results.casdoorDeleteToken = true
+                } else {
+                    // If the response indicates "Unaffected", try an alternative approach
+                    console.log("Token deletion reported 'Unaffected', trying alternative approach...")
+
+                    // Try a simpler approach with just the token
+                    const simpleDeleteResponse = await axios.post(
+                        `${casdoorConfig.endpoint}/api/delete-token`,
+                        { accessToken: token },
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json"
+                            }
+                        }
+                    )
+
+                    console.log("Simple delete-token response:", simpleDeleteResponse.data)
+
+                    if (simpleDeleteResponse.data && simpleDeleteResponse.data.data !== "Unaffected") {
+                        results.casdoorDeleteToken = true
+                    }
+                }
+            } catch (deleteTokenError) {
+                console.error("Error calling Casdoor delete-token endpoint:", deleteTokenError)
+
+                // Try one more approach - directly calling the token API
+                try {
+                    console.log("Trying direct token API approach...")
+
+                    // Some Casdoor instances might use a different endpoint or format
+                    const directTokenResponse = await axios.post(
+                        `${casdoorConfig.endpoint}/api/token`,
+                        {
+                            owner: owner,
+                            name: name || userId,
+                            token: token,
+                            action: "delete"
+                        },
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json"
+                            }
+                        }
+                    )
+
+                    console.log("Direct token API response:", directTokenResponse.data)
+
+                    if (directTokenResponse.data && directTokenResponse.data.status === "ok") {
+                        results.casdoorDeleteToken = true
+                    }
+                } catch (directTokenError) {
+                    console.error("Error calling direct token API:", directTokenError)
+                }
+            }
+
+            // Return success if at least the local blacklist worked
+            return {
+                success: true,
+                message: "Token revoked",
+                details: results
+            }
         } catch (error) {
             console.error("Error revoking token:", error)
-            // Even if there's an error, we should continue with the logout process
-            return { success: false, error: (error as Error).message }
+            // Try to blacklist the token even if parsing fails
+            try {
+                // Use a long expiry time if we can't parse the token
+                const oneYearFromNow = Math.floor(Date.now() / 1000) + 31536000 // 1 year
+                await tokenBlacklist.addToBlacklist(token, oneYearFromNow)
+                return { success: true, message: "Token blacklisted locally despite parsing error" }
+            } catch (blacklistError) {
+                console.error("Failed to blacklist token:", blacklistError)
+                return { success: false, error: (error as Error).message }
+            }
         }
     }
 
@@ -156,7 +287,7 @@ class AuthService {
         // Check if user has admin permissions
         if (payload.permissions && Array.isArray(payload.permissions)) {
             return payload.permissions.some(
-                (p: string | any) => typeof p === "string" && (p.includes("admin") || p.includes("Admin") || p === "*"),
+                (p: string | any) => typeof p === "string" && (p.includes("admin") || p.includes("Admin") || p === "*")
             )
         }
 

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express"
 import authService from "../services/authService"
+import tokenBlacklist from "../services/tokenBlacklistService"
 import { unauthorized } from "../utils/responses"
 
 // Extend Express Request type to include user information
@@ -16,9 +17,9 @@ declare global {
 /**
  * Middleware to verify JWT token
  */
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        let token: string | undefined
+        let token: string | undefined;
 
         // First try to get token from authorization header
         const authHeader = req.headers.authorization
@@ -39,6 +40,12 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
         // If token not found by any method, return unauthorized error
         if (!token) {
             return unauthorized(res, "No token provided")
+        }
+
+        // Check if token is blacklisted
+        const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+        if (isBlacklisted) {
+            return unauthorized(res, "Token has been revoked")
         }
 
         // Set token to request object
@@ -68,7 +75,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
         return res.status(500).json({
             success: false,
             message: "Verification failed",
-            error: (error as Error).message,
+            error: (error as Error).message
         })
     }
 }
@@ -85,12 +92,15 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
         const isAdmin =
             req.user.role === "admin" ||
             req.user.isAdmin === true ||
-            (req.user.groups && (req.user.groups.includes("admin") || req.user.groups.includes("Team695/admin")))
+            (req.user.groups && (
+                req.user.groups.includes("admin") ||
+                req.user.groups.includes("Team695/admin")
+            ))
 
         if (!isAdmin) {
             return res.status(403).json({
                 success: false,
-                message: "Admin privileges required",
+                message: "Admin privileges required"
             })
         }
 
@@ -99,7 +109,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
         console.error("Admin check error:", error)
         return res.status(500).json({
             success: false,
-            message: "Failed to verify admin privileges",
+            message: "Failed to verify admin privileges"
         })
     }
 }
@@ -108,9 +118,9 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
  * Optional authentication middleware
  * Will attach user info if token is provided and valid, but won't block the request if not
  */
-export const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        let token: string | undefined
+        let token: string | undefined;
 
         // First try to get token from authorization header
         const authHeader = req.headers.authorization
@@ -125,6 +135,13 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction) =>
 
         // If token is not provided, continue without authentication
         if (!token) {
+            return next()
+        }
+
+        // Check if token is blacklisted
+        const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+        if (isBlacklisted) {
+            // Token is blacklisted, but we'll continue without authentication
             return next()
         }
 

@@ -452,7 +452,7 @@ paths:
   /auth/logout:
     post:
       summary: Logout user
-      description: Revoke the current token and log out the user
+      description: Revokes the current token by calling both Casdoor logout and delete-token endpoints, and adds it to the local blacklist
       tags:
         - Auth
       security:
@@ -472,8 +472,88 @@ paths:
                         properties:
                           message:
                             type: string
+                            example: "Logged out successfully"
+                          details:
+                            type: object
+                            properties:
+                              localBlacklist:
+                                type: boolean
+                              casdoorLogout:
+                                type: boolean
+                              casdoorDeleteToken:
+                                type: boolean
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/revoke-token:
+    post:
+      summary: Revoke a specific token (Admin only)
+      description: Allows administrators to revoke a specific token
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: The token to revoke
+      responses:
+        '200':
+          description: Token revoked successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "Token revoked successfully"
+                          details:
+                            type: object
+                            properties:
+                              localBlacklist:
+                                type: boolean
+                              casdoorLogout:
+                                type: boolean
+                              casdoorDeleteToken:
+                                type: boolean
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:

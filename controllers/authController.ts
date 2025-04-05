@@ -1,5 +1,6 @@
 import type { Request, Response } from "express"
 import authService from "../services/authService"
+import tokenBlacklist from "../services/tokenBlacklistService"
 import { success, error, unauthorized } from "../utils/responses"
 
 class AuthController {
@@ -25,7 +26,7 @@ class AuthController {
     /**
      * Get current user information
      */
-    getCurrentUser(req: Request, res: Response) {
+    async getCurrentUser(req: Request, res: Response) {
         try {
             // First check if middleware has already set user information
             if (req.user) {
@@ -58,6 +59,12 @@ class AuthController {
                 return unauthorized(res, "Please provide a valid JWT token")
             }
 
+            // Check if token is blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return unauthorized(res, "Token has been revoked")
+            }
+
             // Try to parse the token
             try {
                 const decodedToken = authService.parseJwtToken(token)
@@ -84,12 +91,18 @@ class AuthController {
     /**
      * Get user information from token
      */
-    getUserInfoFromToken(req: Request, res: Response) {
+    async getUserInfoFromToken(req: Request, res: Response) {
         try {
             const token = req.query.token as string
 
             if (!token) {
                 return error(res, 400, "Token required")
+            }
+
+            // Check if token is blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return unauthorized(res, "Token has been revoked")
             }
 
             const userInfo = authService.parseJwtToken(token)
@@ -128,6 +141,7 @@ class AuthController {
 
     /**
      * Logout user by revoking token
+     * This will invalidate the token on Casdoor server and add it to our local blacklist
      */
     async logout(req: Request, res: Response) {
         try {
@@ -137,15 +151,62 @@ class AuthController {
                 return error(res, 400, "Token required")
             }
 
-            // Revoke the token on Casdoor server
-            await authService.revokeToken(token)
+            // Check if token is already blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return success(res, { message: "Already logged out" })
+            }
 
-            return success(res, { message: "Logged out successfully" })
+            // Revoke the token on Casdoor server and add to blacklist
+            const revokeResult = await authService.revokeToken(token)
+
+            // Log detailed information about the revocation process
+            console.log("Token revocation details:", revokeResult)
+
+            return success(res, {
+                message: "Logged out successfully",
+                details: process.env.NODE_ENV === 'development' ? revokeResult.details : undefined
+            })
         } catch (err) {
             // Even if there's an error, we should return success to the client
             // as we want them to clear their local token storage
             console.error("Logout error:", err)
             return success(res, { message: "Logged out successfully" })
+        }
+    }
+
+    /**
+     * Force revoke a specific token (admin only)
+     * This can be used by administrators to revoke tokens for other users
+     */
+    async revokeSpecificToken(req: Request, res: Response) {
+        try {
+            // Check if the current user is an admin
+            if (!req.user || !authService.isUserAdmin(req.decodedToken)) {
+                return error(res, 403, "Admin privileges required")
+            }
+
+            const { token } = req.body
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Check if token is already blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return success(res, { message: "Token already revoked" })
+            }
+
+            // Revoke the specified token
+            const revokeResult = await authService.revokeToken(token)
+
+            return success(res, {
+                message: "Token revoked successfully",
+                details: revokeResult.details
+            })
+        } catch (err) {
+            return error(res, 500, "Failed to revoke token", err)
         }
     }
 }

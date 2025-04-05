@@ -1,6 +1,6 @@
 import { Router } from "express"
 import authController from "../controllers/authController"
-import { verifyToken } from "../middlewares/auth"
+import { verifyToken, requireAdmin } from "../middlewares/auth"
 
 const router = Router()
 
@@ -15,5 +15,8 @@ router.get("/me", authController.getCurrentUser)
 // Protected routes
 router.get("/validate", verifyToken, authController.validateToken)
 router.post("/logout", verifyToken, authController.logout)
+
+// Admin routes
+router.post("/revoke-token", verifyToken, requireAdmin, authController.revokeSpecificToken)
 
 export default router
