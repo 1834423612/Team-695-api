@@ -1,85 +1,92 @@
-import { Request, Response, NextFunction } from 'express';
-import authService from '../services/authService';
+import type { Request, Response, NextFunction } from "express"
+import authService from "../services/authService"
 
-// Extend Express Request interface to include user property
+// Extend Express Request type to include user information
 declare global {
     namespace Express {
         interface Request {
-            user?: any;
+            user?: any
+            token?: string
+            decodedToken?: any
         }
     }
 }
 
 /**
- * Authentication middleware
- * Verifies the token and attaches user info to the request
+ * Middleware to verify JWT token
  */
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('Authorization header:', req.headers.authorization);
-
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader) {
-            return res.status(401).json({ error: 'Authorization header missing' });
+        let token: string | undefined;
+        
+        // First try to get token from authorization header
+        const authHeader = req.headers.authorization
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            token = authHeader.split(" ")[1]
+        }
+        
+        // If not found in authorization header, try from query parameters
+        if (!token) {
+            token = req.query.token as string
         }
 
-        if (!authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ error: 'Invalid authorization format. Use Bearer token' });
+        // If not found in query parameters, check if already set in request object
+        if (!token && req.token) {
+            token = req.token
         }
 
-        const token = authHeader.split(' ')[1];
-        console.log('Extracted token:', token);
+        // If token not found by any method, return unauthorized error
+        if (!token) {
+            return res.status(401).json({ message: "No token provided" })
+        }
 
-        const user = await authService.verifyToken(token);
-        console.log('Verified user:', user);
+        // Set token to request object
+        req.token = token
 
-        req.user = user;
+        // Parse and verify token
+        try {
+            const decodedToken = authService.parseJwtToken(token)
+            
+            // Check if token is expired
+            const currentTime = Math.floor(Date.now() / 1000)
+            if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
+                return res.status(401).json({ message: "Token expired" })
+            }
 
-        next();
+            // Attach decoded token and user information to request object
+            req.decodedToken = decodedToken
+            req.user = decodedToken.payload
+            
+            next()
+        } catch (tokenError) {
+            console.error("Token parsing error:", tokenError)
+            return res.status(401).json({ message: "Invalid token", error: (tokenError as Error).message })
+        }
     } catch (error) {
-        console.error('Authentication error:', error);
-        return res.status(401).json({ error: 'Authentication failed' });
+        console.error("Token verification error:", error)
+        return res.status(500).json({ message: "Verification failed", error: (error as Error).message })
     }
-};
+}
 
 /**
- * Role-based access control middleware
- * @param roles Array of allowed roles
- */
-export const authorize = (roles: string[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
-        if (!req.user) {
-            return res.status(401).json({ error: 'User not authenticated' });
-        }
-
-        // Check if user has any of the required roles
-        const userRoles = req.user.roles || [];
-        const hasRole = roles.some(role => userRoles.includes(role));
-
-        if (!hasRole) {
-            return res.status(403).json({ error: 'Insufficient permissions' });
-        }
-
-        next();
-    };
-};
-
-/**
- * Admin access control middleware
+ * Middleware to check if user is admin
  */
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'User not authenticated' });
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "Authentication required" })
+        }
+
+        const isAdmin =
+            req.user.role === "admin" || req.user.isAdmin === true || (req.user.groups && req.user.groups.includes("admin"))
+
+        if (!isAdmin) {
+            return res.status(403).json({ message: "Admin privileges required" })
+        }
+
+        next()
+    } catch (error) {
+        console.error("Admin check error:", error)
+        return res.status(500).json({ message: "Failed to verify admin privileges" })
     }
-
-    // Check if user is an admin
-    const isAdmin = req.user.isAdmin ||
-        (req.user.roles && req.user.roles.includes('admin'));
-
-    if (!isAdmin) {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    next();
-};
+}

@@ -1,14 +1,17 @@
-import express from 'express';
-import authController from '../controllers/authController';
-import { authenticate, requireAdmin } from '../middlewares/auth';
+import { Router } from "express"
+import authController from "../controllers/authController"
+import { verifyToken } from "../middlewares/auth"
 
-const router = express.Router();
+const router = Router()
 
 // Public routes
-router.post('/callback', authController.handleCallback);
+router.post("/callback", authController.handleCallback)
+router.get("/user-info", authController.getUserInfoFromToken)
 
-// Protected routes
-router.get('/user', authenticate, authController.getUserInfo);
-router.get('/users', authenticate, requireAdmin, authController.getAllUsers);
+// `/me` endpoint - won't use token verification middleware
+router.get("/me", authController.getCurrentUser)
 
-export default router;
+// `/validate` endpoint 
+router.get("/validate", verifyToken, authController.validateToken)
+
+export default router

@@ -1,13 +1,13 @@
 openapi: 3.0.0
 info:
   title: Team 695 API
+  description: Team 695 API Documentation for multiple services
   version: 1.0.0
-  description: API documentation for managing events, surveys, teams, uploads, and feedback.
 servers:
-  - url: https://api.team695.com
-    description: Production server
   - url: http://localhost:3000/api
     description: Development server
+  - url: https://api.team695.com
+    description: Production server
 tags: 
   - name: Auth
     description: APIs related to authentication and authorization
@@ -27,261 +27,393 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT Access Token
+        refresh_token:
+          type: string
+          description: JWT Refresh Token
+        token_type:
+          type: string
+          description: Token Type (usually "Bearer")
+        expires_in:
+          type: integer
+          description: Access Token Expiration Time in seconds
+    UserInfo:
+      type: object
+      properties:
+        sub:
+          type: string
+          description: User ID
+        name:
+          type: string
+          description: User Name
+        email:
+          type: string
+          description: User Email
+        preferred_username:
+          type: string
+          description: Preferred Username
+        owner:
+          type: string
+          description: Owner of the user
+        role:
+          type: string
+          description: User role
+        isAdmin:
+          type: boolean
+          description: Whether the user is an admin
+        groups:
+          type: array
+          items:
+            type: string
+          description: User groups
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Detailed error information
+    DecodedToken:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            alg:
+              type: string
+            kid:
+              type: string
+            typ:
+              type: string
+        payload:
+          $ref: '#/components/schemas/UserInfo'
+        signature:
+          type: string
+    FeedbackRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          description: Name of the person submitting feedback
+        category:
+          type: string
+          description: Feedback category
+        title:
+          type: string
+          description: Feedback title
+        contact:
+          type: string
+          description: Contact information (usually email)
+        content:
+          type: string
+          description: Feedback content
+        deviceInfo:
+          type: object
+          properties:
+            userAgent:
+              type: string
+            ip:
+              type: string
+            screenSize:
+              type: string
+            language:
+              type: string
+    UploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL of the uploaded file
+    EventResponse:
+      type: object
+      properties:
+        eventId:
+          type: string
+          description: ID of the current event
+    TeamResponse:
+      type: object
+      properties:
+        team_number:
+          type: string
+          description: Team number
+        team_name:
+          type: string
+          description: Team name
+    SurveySubmissionRequest:
+      type: object
+      properties:
+        eventId:
+          type: string
+          description: ID of the event
+        tabs:
+          type: array
+          items:
+            type: object
+            properties:
+              formId:
+                type: string
+              formData:
+                type: array
+                items:
+                  type: object
+        images:
+          type: object
+          properties:
+            fullRobotImages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ImageData'
+            driveTrainImages:
+              type: array
+              items:
+                $ref: '#/components/schemas/ImageData'
+        userData:
+          type: object
+          properties:
+            email:
+              type: string
+            avatar:
+              type: string
+            userId:
+              type: string
+            username:
+              type: string
+            displayName:
+              type: string
+        deviceInfo:
+          type: object
+          properties:
+            userAgent:
+              type: string
+            ip:
+              type: string
+            language:
+              type: string
+    ImageData:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL of the image
+        name:
+          type: string
+          description: Name of the image
+        size:
+          type: number
+          description: Size of the image in bytes
+    SurveyResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: string
+        form_id:
+          type: string
+        data:
+          type: object
+        upload:
+          type: object
+        user_data:
+          type: object
+        user_agent:
+          type: string
+        ip:
+          type: string
+        language:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
 paths:
   /auth/callback:
     post:
+      summary: Exchange authorization code for access token
+      description: Process the authorization code returned from Casdoor and exchange it for an access token
       tags:
         - Auth
-      summary: Handle Casdoor callback
-      description: Exchange the authorization code for an access token.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                code:
-                  type: string
-                  description: The authorization code from Casdoor.
-      responses:
-        200:
-          description: Successfully exchanged the code for a token.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                    description: The access token.
-        400:
-          description: Authorization code is required.
-        500:
-          description: Failed to process authentication.
-
-  /auth/user:
-    get:
-      tags:
-        - Auth
-      summary: Get user info
-      description: Retrieve user information from the access token.
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Successfully retrieved user info.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  name:
-                    type: string
-                  email:
-                    type: string
-        401:
-          description: Not authenticated.
-        500:
-          description: Failed to get user info.
-
-  /auth/users:
-    get:
-      tags:
-        - Auth
-      summary: Get all users
-      description: Retrieve all users (admin only).
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Successfully retrieved all users.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    name:
-                      type: string
-                    email:
-                      type: string
-        401:
-          description: Not authenticated.
-        403:
-          description: Forbidden (admin only).
-        500:
-          description: Failed to get users.
-
-  /event/event-id:
-    get:
-      tags:
-        - Events
-      summary: Get the latest event ID
-      description: Fetch the most recent event ID from the database.
-      responses:
-        200:
-          description: Successfully fetched the event ID.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  eventId:
-                    type: string
-        404:
-          description: Event not found.
-        500:
-          description: Failed to fetch event ID.
-
-  /survey/submit:
-    post:
-      tags:
-        - Surveys
-      summary: Submit a survey
-      description: Submit survey data to the database.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                eventId:
-                  type: string
-                tabs:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      formId:
-                        type: string
-                      formData:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            question:
-                              type: string
-                            value:
-                              type: string
-                images:
-                  type: object
-                  properties:
-                    fullRobotImages:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          url:
-                            type: string
-                          name:
-                            type: string
-                          size:
-                            type: number
-                    driveTrainImages:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          url:
-                            type: string
-                          name:
-                            type: string
-                          size:
-                            type: number
-                userData:
-                  type: object
-                  properties:
-                    email:
-                      type: string
-                    avatar:
-                      type: string
-                    userId:
-                      type: string
-                    username:
-                      type: string
-                    displayName:
-                      type: string
-                deviceInfo:
-                  type: object
-                  properties:
-                    userAgent:
-                      type: string
-                    ip:
-                      type: string
-                    language:
-                      type: string
-      responses:
-        200:
-          description: Survey submitted successfully.
-        500:
-          description: Failed to submit survey.
-
-  /survey/query:
-    get:
-      tags:
-        - Surveys
-      summary: Query surveys
-      description: Fetch survey data based on query parameters.
       parameters:
         - in: query
-          name: eventId
+          name: code
+          required: true
           schema:
             type: string
-          description: Event ID
-        - in: query
-          name: formId
-          schema:
-            type: string
-          description: Form ID
-        - in: query
-          name: teamNumber
-          schema:
-            type: string
-          description: Team number
+          description: Authorization code returned from Casdoor
       responses:
-        200:
-          description: Successfully fetched survey data.
-        500:
-          description: Failed to query survey responses.
-
-  /team/teams:
-    get:
-      tags:
-        - Teams
-      summary: Get all teams
-      description: Fetch all teams from the database.
-      responses:
-        200:
-          description: Successfully fetched teams.
+        '200':
+          description: Successfully exchanged code for token
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    team_number:
-                      type: string
-                    team_name:
-                      type: string
-        500:
-          description: Failed to fetch teams.
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/user-info:
+    get:
+      summary: Decode JWT token and return user info
+      description: Decode the JWT token and return user information
+      tags:
+        - Auth
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+          description: JWT Token to decode
+      responses:
+        '200':
+          description: User information decoded from the token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecodedToken'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      summary: Get current user info
+      description: Retrieve the current user's information using the provided JWT token
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+          description: JWT Token (optional, if not provided in Authorization header)
+      responses:
+        '200':
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/validate:
+    get:
+      summary: Validate JWT token
+      description: Validate the provided JWT token and return the result
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+          description: JWT Token (optional, if not provided in Authorization header)
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /feedback:
+    post:
+      summary: Submit feedback
+      description: Submit feedback for the website or service
+      tags:
+        - Feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '201':
+          description: Feedback submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /upload/upload:
     post:
+      summary: Upload a file
+      description: Upload an image file to the server
       tags:
         - Uploads
-      summary: Upload an image
-      description: Upload an image to Cloudflare R2 and store metadata in the database.
       requestBody:
-        required: true
         content:
           multipart/form-data:
             schema:
@@ -290,65 +422,183 @@ paths:
                 file:
                   type: string
                   format: binary
+                  description: File to upload
                 type:
                   type: string
+                  description: Type of upload (e.g., 'robots', 'drivetrain')
       responses:
-        200:
-          description: Image uploaded successfully.
+        '200':
+          description: File uploaded successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-        400:
-          description: No file uploaded.
-        404:
-          description: Event not found.
-        500:
-          description: Failed to upload image.
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /upload/images/{imageId}:
     delete:
+      summary: Delete an image
+      description: Delete an uploaded image by ID
       tags:
         - Uploads
-      summary: Delete an image
-      description: Delete an image from Cloudflare R2 and update the database.
       parameters:
         - in: path
           name: imageId
           required: true
           schema:
             type: string
-          description: The ID of the image to delete.
+          description: ID of the image to delete
       responses:
-        200:
-          description: Image deleted successfully.
-        404:
-          description: Image not found.
-        500:
-          description: Failed to delete image.
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /feedback/feedback:
-    post:
+  /event/event-id:
+    get:
+      summary: Get current event ID
+      description: Retrieve the ID of the most recent event
       tags:
-        - Feedback
-      summary: Submit feedback
-      description: Submit feedback with rate limiting.
+        - Events
+      responses:
+        '200':
+          description: Event ID retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /team/teams:
+    get:
+      summary: Get list of teams
+      description: Retrieve a list of all teams with their numbers and names
+      tags:
+        - Teams
+      responses:
+        '200':
+          description: Teams retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /survey/submit:
+    post:
+      summary: Submit survey response
+      description: Submit a new survey response for an event
+      tags:
+        - Surveys
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                feedback:
-                  type: string
+              $ref: '#/components/schemas/SurveySubmissionRequest'
       responses:
-        200:
-          description: Feedback submitted successfully.
-        429:
-          description: Too many requests.
-        500:
-          description: Failed to submit feedback.
+        '200':
+          description: Survey submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /survey/query:
+    get:
+      summary: Query survey responses
+      description: Query survey responses with optional filtering
+      tags:
+        - Surveys
+      parameters:
+        - in: query
+          name: eventId
+          schema:
+            type: string
+          description: Filter by event ID
+        - in: query
+          name: formId
+          schema:
+            type: string
+          description: Filter by form ID
+        - in: query
+          name: teamNumber
+          schema:
+            type: string
+          description: Filter by team number
+      responses:
+        '200':
+          description: Survey responses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SurveyResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

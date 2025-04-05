@@ -1,98 +1,89 @@
-import { SDK } from 'casdoor-nodejs-sdk';
-import { casdoorConfig } from '../config/casdoor';
+import { SDK } from "casdoor-nodejs-sdk"
+import { casdoorConfig } from "../config/casdoor"
+import type { DecodedToken } from "../types"
 
 class AuthService {
-    private sdk: SDK;
+    private sdk: SDK
 
     constructor() {
-        this.sdk = new SDK(casdoorConfig);
+        this.sdk = new SDK(casdoorConfig)
     }
 
     /**
-     * Get auth token from callback code
+     * Parse JWT token to get user information
      */
-    async getAuthToken(code: string): Promise<string> {
+    parseJwtToken(token: string): DecodedToken {
         try {
-            const { access_token } = await this.sdk.getAuthToken(code);
-            return access_token;
+            // Log the first 10 characters of the token for debugging
+            console.log(`Attempting to parse token (first 10 chars): ${token.slice(0, 10)}...`)
+            
+            // SDK return type may not match our DecodedToken, need conversion
+            const result = this.sdk.parseJwtToken(token) as any
+            
+            // Print SDK return value to help debugging
+            console.log('SDK token parsing return type:', typeof result)
+            console.log('SDK token parsing return structure:', Object.keys(result))
+            
+            // Create an object conforming to our DecodedToken format
+            const decodedToken: DecodedToken = {
+                header: {
+                    alg: "RS256",
+                    kid: "default",
+                    typ: "JWT"
+                },
+                payload: {
+                    exp: typeof result.exp === 'number' ? result.exp : Math.floor(Date.now() / 1000) + 3600,
+                    sub: result.id || result.sub || result.name || '',
+                    name: result.name || '',
+                    email: result.email || '',
+                    preferred_username: result.username || result.preferred_username || result.name || '',
+                    owner: result.owner || '',
+                    role: result.role || '',
+                    isAdmin: result.isAdmin || false,
+                    // Add other possible fields
+                    ...result
+                },
+                signature: ''
+            }
+            
+            console.log('Constructed DecodedToken:', {
+                sub: decodedToken.payload.sub,
+                name: decodedToken.payload.name,
+                email: decodedToken.payload.email
+            })
+            
+            return decodedToken
         } catch (error) {
-            console.error('Error getting auth token:', error);
-            throw error;
+            console.error("Error parsing JWT token:", error)
+            throw new Error(`Failed to parse token: ${(error as Error).message}`)
         }
     }
 
     /**
-     * Parse JWT token to get user info
+     * Get access token using authorization code
      */
-    parseJwtToken(token: string): any {
+    async getAuthToken(code: string) {
         try {
-            return this.sdk.parseJwtToken(token);
+            return await this.sdk.getAuthToken(code)
         } catch (error) {
-            console.error('Error parsing JWT token:', error);
-            throw error;
+            console.error("Error getting access token:", error)
+            throw error
         }
     }
 
     /**
-     * Get user info by ID
+     * Get user information
      */
-    async getUserById(userId: string): Promise<any> {
+    getUserInfo(token: string) {
         try {
-            const { data } = await this.sdk.getUser(userId);
-            return data as unknown as any[];
+            // Get user information from token
+            const userInfo = this.parseJwtToken(token)
+            return userInfo
         } catch (error) {
-            console.error(`Error getting user by ID ${userId}:`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get all users
-     */
-    async getUsers(): Promise<any[]> {
-        try {
-            const { data } = await this.sdk.getUsers();
-            return data as unknown as any[];
-        } catch (error) {
-            console.error('Error getting users:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Verify token and return user info
-     */
-    async verifyToken(token: string): Promise<any> {
-        try {
-            const userInfo = this.parseJwtToken(token);
-    
-            if (!userInfo) {
-                throw new Error('Invalid token');
-            }
-    
-            // 验证 iss 字段
-            const validIssuers = ['https://sso.team695.com', 'https://www.team695.com'];
-            if (!validIssuers.includes(userInfo.iss)) {
-                throw new Error(`Invalid issuer: ${userInfo.iss}`);
-            }
-    
-            // 验证 aud 字段
-            if (!userInfo.aud || !userInfo.aud.includes(process.env.CASDOOR_CLIENT_ID)) {
-                throw new Error(`Invalid audience: ${userInfo.aud}`);
-            }
-    
-            // 验证 exp 字段
-            const now = Math.floor(Date.now() / 1000);
-            if (userInfo.exp && userInfo.exp < now) {
-                throw new Error('Token has expired');
-            }
-    
-            return userInfo;
-        } catch (error) {
-            console.error('Token verification failed:', error);
-            throw new Error('Invalid token');
+            console.error("Error getting user information:", error)
+            throw error
         }
     }
 }
 
-export default new AuthService();
+export default new AuthService()
