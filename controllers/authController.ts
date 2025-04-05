@@ -1,59 +1,214 @@
-import { Request, Response } from 'express';
-import authService from '../services/authService';
+import type { Request, Response } from "express"
+import authService from "../services/authService"
+import tokenBlacklist from "../services/tokenBlacklistService"
+import { success, error, unauthorized } from "../utils/responses"
 
 class AuthController {
     /**
-     * Handle Casdoor callback
-     * @route POST /api/auth/callback
+     * Handle OAuth callback and exchange code for tokens
      */
     async handleCallback(req: Request, res: Response) {
         try {
-            const { code } = req.body;
+            const code = req.query.code as string
 
             if (!code) {
-                return res.status(400).json({ error: 'Authorization code is required' });
+                return error(res, 400, "Authorization code required")
             }
 
-            const token = await authService.getAuthToken(code);
-
-            return res.json({ token });
-        } catch (error) {
-            console.error('Callback error:', error);
-            return res.status(500).json({ error: 'Failed to process authentication' });
+            const tokenResponse = await authService.getAuthToken(code)
+            return success(res, tokenResponse)
+        } catch (err) {
+            console.error("Callback error:", err)
+            return error(res, 500, "Authentication failed", err)
         }
     }
 
     /**
-     * Get user info from token
-     * @route GET /api/auth/user
+     * Get current user information
      */
-    async getUserInfo(req: Request, res: Response) {
+    async getCurrentUser(req: Request, res: Response) {
         try {
-            // The authenticate middleware already attached user to the request
-            if (!req.user) {
-                return res.status(401).json({ error: 'Not authenticated' });
+            // First check if middleware has already set user information
+            if (req.user) {
+                return success(res, req.user)
             }
 
-            return res.json(req.user);
-        } catch (error) {
-            console.error('Get user info error:', error);
-            return res.status(500).json({ error: 'Failed to get user info' });
+            // Try to get token from different sources
+            let token: string | undefined
+
+            // Get from Authorization header
+            const authHeader = req.headers.authorization
+            if (authHeader) {
+                // Support tokens with or without Bearer prefix
+                token = authHeader.startsWith("Bearer ")
+                    ? authHeader.slice(7) // Remove "Bearer " prefix
+                    : authHeader
+            }
+
+            // Get from query parameters
+            if (!token && req.query.token) {
+                token = req.query.token as string
+            }
+
+            // Get from request object
+            if (!token && req.token) {
+                token = req.token
+            }
+
+            if (!token) {
+                return unauthorized(res, "Please provide a valid JWT token")
+            }
+
+            // Check if token is blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return unauthorized(res, "Token has been revoked")
+            }
+
+            // Try to parse the token
+            try {
+                const decodedToken = authService.parseJwtToken(token)
+
+                // Validate token content
+                if (!decodedToken || !decodedToken.payload) {
+                    return unauthorized(res, "Token content is invalid")
+                }
+
+                // Set user information to request object for future use
+                req.user = decodedToken.payload
+                req.token = token
+                req.decodedToken = decodedToken
+
+                return success(res, decodedToken.payload)
+            } catch (tokenError) {
+                return unauthorized(res, (tokenError as Error).message)
+            }
+        } catch (err) {
+            return error(res, 500, "Failed to get user information", err)
         }
     }
 
     /**
-     * Get all users (admin only)
-     * @route GET /api/auth/users
+     * Get user information from token
      */
-    async getAllUsers(req: Request, res: Response) {
+    async getUserInfoFromToken(req: Request, res: Response) {
         try {
-            const users = await authService.getUsers();
-            return res.json(users);
-        } catch (error) {
-            console.error('Get users error:', error);
-            return res.status(500).json({ error: 'Failed to get users' });
+            const token = req.query.token as string
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Check if token is blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return unauthorized(res, "Token has been revoked")
+            }
+
+            const userInfo = authService.parseJwtToken(token)
+            return success(res, userInfo)
+        } catch (err) {
+            return error(res, 500, "Failed to get user information", err)
+        }
+    }
+
+    /**
+     * Validate token
+     */
+    validateToken(req: Request, res: Response) {
+        // If we passed the verifyToken middleware, the token is valid
+        const isAdmin = req.user ? authService.isUserAdmin(req.decodedToken) : false
+        return success(res, { valid: true, isAdmin })
+    }
+
+    /**
+     * Refresh access token
+     */
+    async refreshToken(req: Request, res: Response) {
+        try {
+            const { refreshToken } = req.body
+
+            if (!refreshToken) {
+                return error(res, 400, "Refresh token required")
+            }
+
+            const tokenResponse = await authService.refreshToken(refreshToken)
+            return success(res, tokenResponse)
+        } catch (err) {
+            return error(res, 500, "Failed to refresh token", err)
+        }
+    }
+
+    /**
+     * Logout user by revoking token
+     * This will invalidate the token on Casdoor server and add it to our local blacklist
+     */
+    async logout(req: Request, res: Response) {
+        try {
+            const token = req.token
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Check if token is already blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return success(res, { message: "Already logged out" })
+            }
+
+            // Revoke the token on Casdoor server and add to blacklist
+            const revokeResult = await authService.revokeToken(token)
+
+            // Log detailed information about the revocation process
+            console.log("Token revocation details:", revokeResult)
+
+            return success(res, {
+                message: "Logged out successfully",
+                details: process.env.NODE_ENV === 'development' ? revokeResult.details : undefined
+            })
+        } catch (err) {
+            // Even if there's an error, we should return success to the client
+            // as we want them to clear their local token storage
+            console.error("Logout error:", err)
+            return success(res, { message: "Logged out successfully" })
+        }
+    }
+
+    /**
+     * Force revoke a specific token (admin only)
+     * This can be used by administrators to revoke tokens for other users
+     */
+    async revokeSpecificToken(req: Request, res: Response) {
+        try {
+            // Check if the current user is an admin
+            if (!req.user || !authService.isUserAdmin(req.decodedToken)) {
+                return error(res, 403, "Admin privileges required")
+            }
+
+            const { token } = req.body
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Check if token is already blacklisted
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            if (isBlacklisted) {
+                return success(res, { message: "Token already revoked" })
+            }
+
+            // Revoke the specified token
+            const revokeResult = await authService.revokeToken(token)
+
+            return success(res, {
+                message: "Token revoked successfully",
+                details: revokeResult.details
+            })
+        } catch (err) {
+            return error(res, 500, "Failed to revoke token", err)
         }
     }
 }
 
-export default new AuthController();
+export default new AuthController()

@@ -1,14 +1,22 @@
-import express from 'express';
-import authController from '../controllers/authController';
-import { authenticate, requireAdmin } from '../middlewares/auth';
+import { Router } from "express"
+import authController from "../controllers/authController"
+import { verifyToken, requireAdmin } from "../middlewares/auth"
 
-const router = express.Router();
+const router = Router()
 
 // Public routes
-router.post('/callback', authController.handleCallback);
+router.post("/callback", authController.handleCallback)
+router.get("/user-info", authController.getUserInfoFromToken)
+router.post("/refresh-token", authController.refreshToken)
+
+// Routes that handle their own authentication
+router.get("/me", authController.getCurrentUser)
 
 // Protected routes
-router.get('/user', authenticate, authController.getUserInfo);
-router.get('/users', authenticate, requireAdmin, authController.getAllUsers);
+router.get("/validate", verifyToken, authController.validateToken)
+router.post("/logout", verifyToken, authController.logout)
 
-export default router;
+// Admin routes
+router.post("/revoke-token", verifyToken, requireAdmin, authController.revokeSpecificToken)
+
+export default router
