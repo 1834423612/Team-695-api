@@ -209,6 +209,42 @@ class AuthController {
             return error(res, 500, "Failed to revoke token", err)
         }
     }
+
+    /**
+     * Get all users in the organization (admin only)
+     */
+    async getAllUsers(req: Request, res: Response) {
+        try {
+            const token = req.token
+            const { pageSize, pageNumber, sortField, sortOrder } = req.query
+
+            if (!token) {
+                return error(res, 400, "Token required")
+            }
+
+            // Check if user is admin directly from token
+            if (!req.user || !req.user.isAdmin) {
+                return error(res, 403, "Admin privileges required")
+            }
+
+            // Call service to get users with pagination support
+            const result = await authService.getAllUsers(
+                token, 
+                pageSize ? Number(pageSize) : undefined,
+                pageNumber ? Number(pageNumber) : undefined,
+                sortField ? String(sortField) : undefined,
+                sortOrder ? String(sortOrder) : undefined
+            )
+
+            if (!result.success) {
+                return error(res, 500, result.message, result.error)
+            }
+
+            return success(res, result.data)
+        } catch (err) {
+            return error(res, 500, "Failed to get users", err)
+        }
+    }
 }
 
 export default new AuthController()
