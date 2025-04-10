@@ -13,6 +13,7 @@ declare global {
     namespace Express {
         interface Request {
             rawBody?: string;
+            rawBodyBuffer?: Buffer;
         }
     }
 }
@@ -26,6 +27,7 @@ import uploadRoutes from "./routes/uploadRoutes"
 import authRoutes from "./routes/authRoutes"
 import webhookRoutes from "./routes/webhookRoutes"
 import assignmentRoutes from "./routes/assignmentRoutes"
+import { publicTeamMatchesRoutes, protectedTeamMatchesRoutes } from './routes/teamMatchesRoutes';
 import { verifyToken } from "./middlewares/auth"
 
 // Load Swagger configuration
@@ -57,7 +59,9 @@ app.use(
 app.use(bodyParser.json({
     verify: (req: any, res, buf) => {
         // 保存原始请求体以便HMAC验证
-        req.rawBody = buf.toString();
+        req.rawBody = buf.toString(); // 保存为字符串
+        req.rawBodyBuffer = buf;     // 也保存原始缓冲区以防需要
+        console.log("Raw body captured:", req.rawBody);
     }
 }));
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -72,12 +76,14 @@ const apiRouter = express.Router()
 apiRouter.use("/auth", authRoutes)
 apiRouter.use("/team", teamRoutes)
 apiRouter.use("/webhook", webhookRoutes) // 添加webhook路由
+apiRouter.use("/team-matches", publicTeamMatchesRoutes) // Add public team-matches routes
 
 // Protected routes
 apiRouter.use("/event", verifyToken, eventRoutes)
 apiRouter.use("/survey", verifyToken, surveyRoutes)
 apiRouter.use("/upload", verifyToken, uploadRoutes)
 apiRouter.use("/assignments", verifyToken, assignmentRoutes)
+apiRouter.use("/team-matches", verifyToken, protectedTeamMatchesRoutes) // Add protected team-matches routes
 apiRouter.use("/", feedbackRoutes) // Feedback routes have their own protection
 
 // Use the apiRouter for all API routes

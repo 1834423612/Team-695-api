@@ -60,3 +60,18 @@ CREATE TABLE
         INDEX idx_event_key (event_key),
         INDEX idx_event_type (event_key, task_type)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+
+CREATE TABLE
+    IF NOT EXISTS team_matches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_key VARCHAR(20) NOT NULL COMMENT 'Event key, e.g., 2025ohcl',
+        team_key VARCHAR(20) NOT NULL COMMENT 'Team key from TBA, e.g., frc695',
+        team_number INT NOT NULL COMMENT 'Team number',
+        nickname VARCHAR(255) COMMENT 'Team nickname',
+        is_pit BOOLEAN DEFAULT FALSE COMMENT 'Flag indicating if pit-scouting is completed. Yes-1, No-0',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation timestamp',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update timestamp',
+        INDEX idx_event_team (event_key, team_key),
+        INDEX idx_team_number (team_number),
+        UNIQUE KEY unique_event_team (event_key, team_key)
+    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
