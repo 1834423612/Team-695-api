@@ -25,6 +25,8 @@ tags:
     description: APIs for receiving webhook notifications from external services
   - name: Assignments
     description: APIs related to task assignments
+  - name: TeamMatches
+    description: APIs related to team matches and pit-scouting status
 components:
   securitySchemes:
     bearerAuth:
@@ -396,6 +398,32 @@ components:
           type: string
           format: date-time
           description: Assignment last update timestamp
+    TeamMatch:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_key:
+          type: string
+          description: Event key (e.g., 2025ohcl)
+        team_key:
+          type: string
+          description: Team key from TBA (e.g., frc695)
+        team_number:
+          type: integer
+          description: Team number
+        nickname:
+          type: string
+          description: Team nickname
+        is_pit:
+          type: boolean
+          description: Flag indicating if pit-scouting is completed
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
 paths:
   /auth/callback:
@@ -1393,6 +1421,186 @@ paths:
                           $ref: '#/components/schemas/TaskAssignment'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /team-matches/event/{eventKey}:
+    get:
+      summary: Get teams for an event
+      description: Get all teams for a specific event with their pit-scouting status (public endpoint)
+      tags:
+        - TeamMatches
+      parameters:
+        - in: path
+          name: eventKey
+          required: true
+          schema:
+            type: string
+          description: Event key (e.g., 2025ohcl)
+      responses:
+        '200':
+          description: Teams retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TeamMatch'
+        '400':
+          description: Bad request - Missing event key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+                
+  /team-matches/pit-status/{eventKey}/{teamKey}:
+    put:
+      summary: Update pit-scouting status by team key
+      description: Update pit-scouting status for a team using team key
+      tags:
+        - TeamMatches
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: eventKey
+          required: true
+          schema:
+            type: string
+          description: Event key (e.g., 2025ohcl)
+        - in: path
+          name: teamKey
+          required: true
+          schema:
+            type: string
+          description: Team key (e.g., frc695)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_pit
+              properties:
+                is_pit:
+                  type: boolean
+                  description: Pit-scouting completion status
+      responses:
+        '200':
+          description: Pit-scouting status updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TeamMatch'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+                
+  /team-matches/pit-status/{eventKey}/{teamNumber}:
+    put:
+      summary: Update pit-scouting status by team number
+      description: Update pit-scouting status for a team using team number
+      tags:
+        - TeamMatches
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: eventKey
+          required: true
+          schema:
+            type: string
+          description: Event key (e.g., 2025ohcl)
+        - in: path
+          name: teamNumber
+          required: true
+          schema:
+            type: string
+          description: Team number (e.g., 695)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_pit
+              properties:
+                is_pit:
+                  type: boolean
+                  description: Pit-scouting completion status
+      responses:
+        '200':
+          description: Pit-scouting status updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TeamMatch'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Team not found
           content:
             application/json:
               schema:

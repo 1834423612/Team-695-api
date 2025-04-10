@@ -6,7 +6,8 @@
   "main": "index.ts",
   "scripts": {
     "start": "ts-node app.ts",
-    "dev": "nodemon app.ts"
+    "dev": "nodemon app.ts",
+    "update-teams": "ts-node scripts/updateTeamsFromTBA.ts"
   },
   "keywords": [],
   "author": "",
