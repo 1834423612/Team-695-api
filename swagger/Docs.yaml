@@ -21,6 +21,10 @@ tags:
     description: APIs for uploading and managing files
   - name: Feedback
     description: APIs for submitting feedback
+  - name: Webhooks
+    description: APIs for receiving webhook notifications from external services
+  - name: Assignments
+    description: APIs related to task assignments
 components:
   securitySchemes:
     bearerAuth:
@@ -251,6 +255,147 @@ components:
         timestamp:
           type: string
           format: date-time
+    WebhookTbaRequest:
+      type: object
+      properties:
+        message_type:
+          type: string
+          description: Type of TBA notification
+          enum: [ping, verification]
+        message_data:
+          type: object
+          properties:
+            title:
+              type: string
+              description: Title of the ping notification
+            desc:
+              type: string
+              description: Description of the ping notification
+            verification_key:
+              type: string
+              description: Verification key for webhook verification
+    WebhookStatus:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          description: Whether the webhook is verified
+        lastPing:
+          type: string
+          format: date-time
+          description: Timestamp of the last ping received
+        status:
+          type: string
+          enum: [active, inactive, pending]
+          description: Current status of the webhook
+    CreateAssignmentRequest:
+      type: object
+      properties:
+        event_key:
+          type: string
+          description: Event key (e.g. 2025ohcl)
+        task_type:
+          type: string
+          enum: [scouting, pit-scouting]
+          description: Type of scouting task
+        assigned_team_numbers:
+          type: array
+          items:
+            type: integer
+          description: List of team numbers for pit-scouting
+        assigned_alliance:
+          type: string
+          enum: [red, blue]
+          description: Alliance color for scouting
+        assigned_matches:
+          type: string
+          description: Range of matches for scouting (e.g. Q3-Q12)
+        assignees_data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserData'
+          description: List of users assigned to this task
+        notes:
+          type: string
+          description: Additional notes for the assignment
+      required:
+        - event_key
+        - task_type
+        - assignees_data
+    UpdateAssignmentRequest:
+      type: object
+      properties:
+        assigned_team_numbers:
+          type: array
+          items:
+            type: integer
+          description: List of team numbers for pit-scouting
+        assigned_alliance:
+          type: string
+          enum: [red, blue]
+          description: Alliance color for scouting
+        assigned_matches:
+          type: string
+          description: Range of matches for scouting (e.g. Q3-Q12)
+        assignees_data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserData'
+          description: List of users assigned to this task
+        status:
+          type: string
+          enum: [pending, in_progress, completed, canceled]
+          description: Current status of the assignment
+        notes:
+          type: string
+          description: Additional notes for the assignment
+    TaskAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Assignment ID
+        event_key:
+          type: string
+          description: Event key (e.g. 2025ohcl)
+        task_type:
+          type: string
+          enum: [scouting, pit-scouting]
+          description: Type of scouting task
+        assigned_team_numbers:
+          type: array
+          items:
+            type: integer
+          description: List of team numbers for pit-scouting
+        assigned_alliance:
+          type: string
+          enum: [red, blue]
+          description: Alliance color for scouting
+        assigned_matches:
+          type: string
+          description: Range of matches for scouting (e.g. Q3-Q12)
+        assigner_data:
+          $ref: '#/components/schemas/UserData'
+        assignees_data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserData'
+          description: List of users assigned to this task
+        status:
+          type: string
+          enum: [pending, in_progress, completed, canceled]
+          description: Current status of the assignment
+        notes:
+          type: string
+          description: Additional notes for the assignment
+        created_at:
+          type: string
+          format: date-time
+          description: Assignment creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Assignment last update timestamp
 
 paths:
   /auth/callback:
@@ -926,6 +1071,326 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/SurveyResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /webhook/tba:
+    post:
+      summary: Receive TBA webhook notifications
+      description: Endpoint to receive webhook notifications from The Blue Alliance
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookTbaRequest'
+      responses:
+        '200':
+          description: Notification received successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          received:
+                            type: boolean
+                          verification_key:
+                            type: string
+                            description: Only present for verification messages
+        '401':
+          description: Unauthorized - Invalid HMAC signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  
+  /webhook/tba/status:
+    get:
+      summary: Get TBA webhook status
+      description: Retrieve the status of The Blue Alliance webhook integration
+      tags:
+        - Webhooks
+      responses:
+        '200':
+          description: Webhook status retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WebhookStatus'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assignments:
+    post:
+      summary: Create a new task assignment
+      description: Create a new scouting or pit-scouting task assignment (admin only)
+      tags:
+        - Assignments
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TaskAssignment'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assignments/{id}:
+    put:
+      summary: Update a task assignment
+      description: Update an existing task assignment (admin only)
+      tags:
+        - Assignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Task assignment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TaskAssignment'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      summary: Delete a task assignment
+      description: Delete an existing task assignment (admin only)
+      tags:
+        - Assignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Task assignment ID
+      responses:
+        '200':
+          description: Assignment deleted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          deleted:
+                            type: boolean
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /assignments/events/{eventKey}:
+    get:
+      summary: Get all assignments for an event
+      description: Get all task assignments for a specific event (admin only)
+      tags:
+        - Assignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: eventKey
+          required: true
+          schema:
+            type: string
+          description: Event key (e.g. 2025ohcl)
+      responses:
+        '200':
+          description: Assignments retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TaskAssignment'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+                
+  /assignments/user/{eventKey}:
+    get:
+      summary: Get assignments for current user
+      description: Get all task assignments for the current user in a specific event
+      tags:
+        - Assignments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: eventKey
+          required: true
+          schema:
+            type: string
+          description: Event key (e.g. 2025ohcl)
+      responses:
+        '200':
+          description: Assignments retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TaskAssignment'
         '401':
           description: Unauthorized
           content:

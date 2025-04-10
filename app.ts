@@ -15,6 +15,7 @@ import surveyRoutes from "./routes/surveyRoutes"
 import teamRoutes from "./routes/teamRoutes"
 import uploadRoutes from "./routes/uploadRoutes"
 import authRoutes from "./routes/authRoutes"
+import assignmentRoutes from "./routes/assignmentRoutes"
 import { verifyToken } from "./middlewares/auth"
 
 // Load Swagger configuration
@@ -59,6 +60,7 @@ apiRouter.use("/team", teamRoutes)
 apiRouter.use("/event", verifyToken, eventRoutes)
 apiRouter.use("/survey", verifyToken, surveyRoutes)
 apiRouter.use("/upload", verifyToken, uploadRoutes)
+apiRouter.use("/assignments", verifyToken, assignmentRoutes)
 apiRouter.use("/", feedbackRoutes) // Feedback routes have their own protection
 
 // Use the apiRouter for all API routes
