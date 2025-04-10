@@ -8,6 +8,15 @@ import yaml from "yaml"
 import helmet from "helmet"
 import morgan from "morgan"
 
+// 添加类型声明扩展，使rawBody在Request对象上可用
+declare global {
+    namespace Express {
+        interface Request {
+            rawBody?: string;
+        }
+    }
+}
+
 // Load routes
 import feedbackRoutes from "./routes/feedbackRoutes"
 import eventRoutes from "./routes/eventRoutes"
@@ -15,6 +24,7 @@ import surveyRoutes from "./routes/surveyRoutes"
 import teamRoutes from "./routes/teamRoutes"
 import uploadRoutes from "./routes/uploadRoutes"
 import authRoutes from "./routes/authRoutes"
+import webhookRoutes from "./routes/webhookRoutes"
 import assignmentRoutes from "./routes/assignmentRoutes"
 import { verifyToken } from "./middlewares/auth"
 
@@ -42,8 +52,14 @@ app.use(
     }),
 )
 
-// Body parser middleware
-app.use(bodyParser.json())
+// Body parser中间件配置
+// 使用json解析但保留原始文本
+app.use(bodyParser.json({
+    verify: (req: any, res, buf) => {
+        // 保存原始请求体以便HMAC验证
+        req.rawBody = buf.toString();
+    }
+}));
 app.use(bodyParser.urlencoded({ extended: true }))
 
 // Swagger Docs
@@ -55,6 +71,7 @@ const apiRouter = express.Router()
 // Public routes
 apiRouter.use("/auth", authRoutes)
 apiRouter.use("/team", teamRoutes)
+apiRouter.use("/webhook", webhookRoutes) // 添加webhook路由
 
 // Protected routes
 apiRouter.use("/event", verifyToken, eventRoutes)
