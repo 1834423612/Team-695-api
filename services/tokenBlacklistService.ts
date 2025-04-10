@@ -103,10 +103,9 @@ class MockRedisClient {
 // Factory function to create the appropriate implementation
 function createTokenBlacklist(): TokenBlacklistInterface {
     // Always use in-memory implementation for now to avoid Redis dependency
-    return new InMemoryTokenBlacklist();
+    // return new InMemoryTokenBlacklist();
 
     // The following code can be uncommented when Redis is properly set up
-    /*
     // Use Redis in production, in-memory in development
     if (process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
         try {
@@ -135,7 +134,6 @@ function createTokenBlacklist(): TokenBlacklistInterface {
     } else {
         return new InMemoryTokenBlacklist();
     }
-    */
 }
 
 // Export singleton instance

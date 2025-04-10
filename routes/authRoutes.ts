@@ -19,4 +19,7 @@ router.post("/logout", verifyToken, authController.logout)
 // Admin routes
 router.post("/revoke-token", verifyToken, requireAdmin, authController.revokeSpecificToken)
 
+// Admin only endpoints
+router.get('/users', verifyToken, requireAdmin, authController.getAllUsers);
+
 export default router

@@ -293,6 +293,67 @@ class AuthService {
 
         return false
     }
+
+    /**
+     * Get all users from the organization
+     * This API endpoint is only accessible to admins
+     * @param token - Admin user's access token
+     * @param pageSize - Number of users per page (optional)
+     * @param pageNumber - Page number (optional)
+     * @param sortField - Field to sort by (optional)
+     * @param sortOrder - Sort order (optional)
+     * @returns Promise containing the list of users
+     */
+    async getAllUsers(token: string, pageSize = 100, pageNumber = 1, sortField = '', sortOrder = '') {
+        try {
+            // First verify that the token belongs to an admin
+            const decodedToken = this.parseJwtToken(token)
+            if (!this.isUserAdmin(decodedToken)) {
+                throw new Error("Only administrators can access user list")
+            }
+
+            const owner = decodedToken.payload.owner || casdoorConfig.orgName
+            
+            // Build query parameters
+            const params = new URLSearchParams({
+                owner,
+                pageSize: pageSize.toString(),
+                p: pageNumber.toString()
+            })
+            
+            // Add optional sort parameters if provided
+            if (sortField) params.append("sortField", sortField)
+            if (sortOrder) params.append("sortOrder", sortOrder)
+            
+            // Call Casdoor API to get users
+            const response = await axios.get(
+                `${casdoorConfig.endpoint}/api/get-users?${params.toString()}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            )
+
+            if (response.status !== 200) {
+                throw new Error(`Failed to retrieve users: ${response.statusText}`)
+            }
+
+            return {
+                success: true,
+                data: response.data,
+                message: "Users retrieved successfully"
+            }
+        } catch (error) {
+            console.error("Error retrieving users:", error)
+            return { 
+                success: false, 
+                error: (error as Error).message,
+                message: "Failed to retrieve users"
+            }
+        }
+    }
 }
 
 export default new AuthService()
