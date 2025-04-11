@@ -28,63 +28,92 @@ class AuthController {
      */
     async getCurrentUser(req: Request, res: Response) {
         try {
-            // First check if middleware has already set user information
+            console.log("getCurrentUser called with headers:", req.headers);
+            console.log("API authenticated:", req.apiAuthenticated);
+
+            // 检查 API Key 授权 - 先查看是否已由中间件验证过
+            if (req.apiAuthenticated && req.user) {
+                console.log("User authenticated via API Key middleware");
+                return success(res, req.user);
+            }
+
+            // 直接从请求中检查 API Key
+            const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
+            const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
+
+            if (apiKey && apiSecret) {
+                console.log("Found API Key in request, attempting direct authentication");
+                try {
+                    // 使用 API Key 和 Secret 从 Casdoor 获取用户信息
+                    const userData = await authService.getUserInfoWithApiKey(apiKey, apiSecret);
+                    return success(res, userData);
+                } catch (apiErr) {
+                    console.error("API Key direct authentication failed:", apiErr);
+                }
+            }
+            
+            // 如果没有 API Key 或 API Key 验证失败，则尝试 JWT 验证
+            
+            // First check if middleware has already set user information via JWT
             if (req.user) {
-                return success(res, req.user)
+                console.log("User authenticated via JWT middleware");
+                return success(res, req.user);
             }
 
             // Try to get token from different sources
-            let token: string | undefined
+            let token: string | undefined;
 
             // Get from Authorization header
-            const authHeader = req.headers.authorization
+            const authHeader = req.headers.authorization;
             if (authHeader) {
                 // Support tokens with or without Bearer prefix
                 token = authHeader.startsWith("Bearer ")
                     ? authHeader.slice(7) // Remove "Bearer " prefix
-                    : authHeader
+                    : authHeader;
             }
 
             // Get from query parameters
             if (!token && req.query.token) {
-                token = req.query.token as string
+                token = req.query.token as string;
             }
 
             // Get from request object
             if (!token && req.token) {
-                token = req.token
+                token = req.token;
             }
 
             if (!token) {
-                return unauthorized(res, "Please provide a valid JWT token")
+                return unauthorized(res, "Please provide a valid JWT token or API Key/Secret");
             }
 
             // Check if token is blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
             if (isBlacklisted) {
-                return unauthorized(res, "Token has been revoked")
+                return unauthorized(res, "Token has been revoked");
             }
 
             // Try to parse the token
             try {
-                const decodedToken = authService.parseJwtToken(token)
+                const decodedToken = authService.parseJwtToken(token);
 
                 // Validate token content
                 if (!decodedToken || !decodedToken.payload) {
-                    return unauthorized(res, "Token content is invalid")
+                    return unauthorized(res, "Token content is invalid");
                 }
 
                 // Set user information to request object for future use
-                req.user = decodedToken.payload
-                req.token = token
-                req.decodedToken = decodedToken
+                req.user = decodedToken.payload;
+                req.token = token;
+                req.decodedToken = decodedToken;
 
-                return success(res, decodedToken.payload)
+                return success(res, decodedToken.payload);
             } catch (tokenError) {
-                return unauthorized(res, (tokenError as Error).message)
+                console.error("Token parsing error:", tokenError);
+                return unauthorized(res, (tokenError as Error).message);
             }
         } catch (err) {
-            return error(res, 500, "Failed to get user information", err)
+            console.error("Error in getCurrentUser:", err);
+            return error(res, 500, "Failed to get user information", err);
         }
     }
 
