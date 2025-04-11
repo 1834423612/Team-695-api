@@ -50,7 +50,7 @@ app.use(
         origin: process.env.FRONTEND_URL || "*",
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-API-Secret"],
     }),
 )
 
@@ -78,7 +78,7 @@ apiRouter.use("/team", teamRoutes)
 apiRouter.use("/webhook", webhookRoutes) // 添加webhook路由
 apiRouter.use("/team-matches", publicTeamMatchesRoutes) // Add public team-matches routes
 
-// Protected routes
+// Protected routes - 现在这些路由既可以用 JWT 也可以用 API Key 访问
 apiRouter.use("/event", verifyToken, eventRoutes)
 apiRouter.use("/survey", verifyToken, surveyRoutes)
 apiRouter.use("/upload", verifyToken, uploadRoutes)
@@ -89,6 +89,9 @@ apiRouter.use("/", feedbackRoutes) // Feedback routes have their own protection
 // Use the apiRouter for all API routes
 app.use("/", apiRouter) // Allow routes with `/` prefix
 app.use("/api", apiRouter) // Allow routes with `/api` prefix
+
+// 添加 API v1 前缀路由 - 使用相同的路由处理器但有不同的前缀
+app.use("/api/v1", apiRouter)
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

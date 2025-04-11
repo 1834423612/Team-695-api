@@ -33,6 +33,16 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Also called Access Key
+    apiSecretAuth:
+      type: apiKey
+      in: header
+      name: X-API-Secret
+      description: Used together with X-API-Key, also called Access Secret Key
   schemas:
     ApiResponse:
       type: object
@@ -424,6 +434,24 @@ components:
         updated_at:
           type: string
           format: date-time
+    UserData:
+      type: object
+      properties:
+        email:
+          type: string
+          description: User email address
+        avatar:
+          type: string
+          description: URL to user avatar
+        userId:
+          type: string
+          description: User ID
+        username:
+          type: string
+          description: Username
+        displayName:
+          type: string
+          description: User display name
 
 paths:
   /auth/callback:
@@ -505,11 +533,13 @@ paths:
   /auth/me:
     get:
       summary: Get current user info
-      description: Retrieve the current user's information using the provided JWT token
+      description: Retrieve the current user's information using the provided JWT token or API Key
       tags:
         - Auth
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: token
@@ -543,12 +573,14 @@ paths:
 
   /auth/validate:
     get:
-      summary: Validate JWT token
-      description: Validate the provided JWT token and return the result
+      summary: Validate JWT token or API Key
+      description: Validate the provided JWT token or API Key and return the result
       tags:
         - Auth
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: token
@@ -630,6 +662,8 @@ paths:
         - Auth
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       responses:
         '200':
           description: Logged out successfully
@@ -676,6 +710,8 @@ paths:
         - Auth
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       requestBody:
         required: true
         content:
@@ -746,6 +782,8 @@ paths:
         - Auth
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: pageSize
@@ -862,6 +900,8 @@ paths:
         - Uploads
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       requestBody:
         content:
           multipart/form-data:
@@ -920,6 +960,8 @@ paths:
         - Uploads
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: imageId
@@ -967,6 +1009,10 @@ paths:
       description: Retrieve the ID of the most recent event
       tags:
         - Events
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       responses:
         '200':
           description: Event ID retrieved successfully
@@ -1027,6 +1073,8 @@ paths:
         - Surveys
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       requestBody:
         required: true
         content:
@@ -1069,6 +1117,8 @@ paths:
         - Surveys
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: eventId
@@ -1188,6 +1238,8 @@ paths:
         - Assignments
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       requestBody:
         required: true
         content:
@@ -1239,6 +1291,8 @@ paths:
         - Assignments
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: id
@@ -1295,6 +1349,8 @@ paths:
         - Assignments
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: id
@@ -1350,6 +1406,8 @@ paths:
         - Assignments
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: eventKey
@@ -1398,6 +1456,8 @@ paths:
         - Assignments
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: eventKey
@@ -1480,6 +1540,8 @@ paths:
         - TeamMatches
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: eventKey
@@ -1550,6 +1612,8 @@ paths:
         - TeamMatches
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: eventKey

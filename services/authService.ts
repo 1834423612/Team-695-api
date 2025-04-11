@@ -78,6 +78,49 @@ class AuthService {
     }
 
     /**
+     * 使用API Key和Secret从Casdoor获取用户信息
+     * 这允许API客户端绕过JWT流程直接使用API Key进行认证
+     */
+    async getUserInfoWithApiKey(apiKey: string, apiSecret: string) {
+        try {
+            // 根据Casdoor文档，使用URL参数方式调用API
+            const response = await axios.get(
+                `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
+            );
+
+            if (response.status !== 200 || response.data.status !== "ok") {
+                throw new Error("Invalid API credentials");
+            }
+            
+            const userData = response.data;
+            
+            // 创建与JWT认证相似结构的用户对象
+            const user = {
+                id: userData.sub || userData.id || '',
+                name: userData.name || '',
+                email: userData.data?.email || userData.email || '',
+                username: userData.name || '',
+                displayName: userData.data?.displayName || userData.name || '',
+                avatar: userData.data?.avatar || '',
+                // 检查管理员权限
+                isAdmin: 
+                    userData.data?.isAdmin === true || 
+                    (userData.data?.roles && userData.data.roles.some((r: any) => r.name === "admin")) ||
+                    (userData.data?.groups && userData.data.groups.includes("Team695/admin")),
+                role: userData.data?.role || '',
+                groups: userData.data?.groups || [],
+                permissions: userData.data?.permissions || [],
+                owner: userData.data?.owner || casdoorConfig.orgName,
+            };
+
+            return user;
+        } catch (error) {
+            console.error("Error getting user info with API Key:", error);
+            throw error;
+        }
+    }
+
+    /**
      * Refresh access token using refresh token
      */
     async refreshToken(refreshToken: string) {
@@ -255,6 +298,7 @@ class AuthService {
             }
         } catch (error) {
             console.error("Error revoking token:", error)
+
             // Try to blacklist the token even if parsing fails
             try {
                 // Use a long expiry time if we can't parse the token

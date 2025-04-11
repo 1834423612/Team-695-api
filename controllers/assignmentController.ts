@@ -10,6 +10,7 @@ class AssignmentController {
      */
     async createAssignment(req: Request, res: Response) {
         try {
+            // 检查用户是否已认证（通过JWT或API Key）
             if (!req.user) {
                 return error(res, 401, 'Authentication required');
             }
