@@ -146,27 +146,87 @@ class AuthController {
 
     /**
      * Validate token
+     * Checks not only token format but also verifies with Casdoor that the token is still valid
      */
-    validateToken(req: Request, res: Response) {
-        // 如果我们通过了 verifyToken 中间件，意味着认证有效
-        let isAdmin = false;
-
-        // 检查 API Key 认证
-        if (req.apiAuthenticated && req.user) {
-            console.log("API Key authentication detected in validateToken");
-            isAdmin = req.user.isAdmin === true || 
-                (req.user.groups && (
-                    req.user.groups.includes("admin") || 
-                    req.user.groups.includes("Team695/admin")
-                ));
+    async validateToken(req: Request, res: Response) {
+        try {
+            // 如果我们通过了 verifyToken 中间件，意味着基本认证有效
+            let isAdmin = false;
+            let tokenIsActive = false;
+            
+            // 检查 API Key 认证
+            if (req.apiAuthenticated && req.user) {
+                console.log("API Key authentication detected in validateToken");
+                
+                // 验证API Key是否仍然有效（调用Casdoor API）
+                try {
+                    const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
+                    const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
+                    
+                    if (apiKey && apiSecret) {
+                        // 尝试使用API Key获取账户信息来验证其仍然有效
+                        const accountResponse = await axios.get(
+                            `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
+                        );
+                        
+                        tokenIsActive = accountResponse.status === 200 && accountResponse.data?.status === "ok";
+                        console.log(`API Key validation result: ${tokenIsActive ? 'valid' : 'invalid'}`);
+                    }
+                } catch (error) {
+                    console.error("Error validating API key with Casdoor:", error);
+                    tokenIsActive = false;
+                }
+                
+                // 检查是否为管理员
+                isAdmin = req.user.isAdmin === true || 
+                    (req.user.groups && (
+                        req.user.groups.includes("admin") || 
+                        req.user.groups.includes("Team695/admin")
+                    ));
+            }
+            // 检查 JWT 认证
+            else if (req.user && req.decodedToken && req.token) {
+                console.log("JWT authentication detected in validateToken");
+                
+                // 调用Casdoor验证令牌是否仍然有效
+                try {
+                    // 使用令牌调用 Casdoor 的 get-account 端点来验证令牌有效性
+                    const response = await axios.get(
+                        `${casdoorConfig.endpoint}/api/get-account`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${req.token}`,
+                                "Content-Type": "application/json"
+                            }
+                        }
+                    );
+                    
+                    tokenIsActive = response.status === 200 && response.data?.status === "ok";
+                    console.log(`JWT validation result with Casdoor: ${tokenIsActive ? 'valid' : 'invalid'}`);
+                } catch (error) {
+                    console.error("Error validating JWT with Casdoor:", error);
+                    tokenIsActive = false;
+                }
+                
+                isAdmin = authService.isUserAdmin(req.decodedToken);
+            } else {
+                console.log("No authentication detected in validateToken");
+                return unauthorized(res, "Authentication required");
+            }
+            
+            if (!tokenIsActive) {
+                return unauthorized(res, "Token/API Key is no longer valid");
+            }
+            
+            return success(res, { 
+                valid: true, 
+                isAdmin,
+                tokenStatus: "active"
+            });
+        } catch (err) {
+            console.error("Token validation error:", err);
+            return error(res, 500, "Failed to validate token", err);
         }
-        // 检查 JWT 认证
-        else if (req.user && req.decodedToken) {
-            console.log("JWT authentication detected in validateToken");
-            isAdmin = authService.isUserAdmin(req.decodedToken);
-        }
-
-        return success(res, { valid: true, isAdmin });
     }
 
     /**
