@@ -437,25 +437,55 @@ class AuthService {
      */
     async getAllUsersWithApiKey(apiKey: string, apiSecret: string, pageSize = 100, pageNumber = 1, sortField = '', sortOrder = '') {
         try {
-            // 构建查询参数
+            // First get account info to verify admin status and get correct owner
+            console.log("Getting account info to verify admin status");
+            const accountResponse = await axios.get(
+                `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
+            );
+            
+            if (accountResponse.status !== 200 || accountResponse.data.status !== "ok") {
+                throw new Error("Failed to verify account information");
+            }
+            
+            // Extract user info from response
+            const userData = accountResponse.data;
+            const userOwner = userData.data?.owner || casdoorConfig.orgName;
+            const isAdmin = userData.data?.isAdmin === true || 
+                (userData.data?.groups && userData.data.groups.includes("Team695/admin"));
+            
+            if (!isAdmin) {
+                throw new Error("Only administrators can access user list");
+            }
+            
+            console.log(`User verified as admin. Using owner: ${userOwner}`);
+            
+            // Build query parameters with the correct owner
             const params = new URLSearchParams({
+                owner: userOwner,
                 pageSize: pageSize.toString(),
                 p: pageNumber.toString(),
                 accessKey: apiKey,
                 accessSecret: apiSecret
             });
             
-            // 添加可选的排序参数
+            // Add optional sort parameters
             if (sortField) params.append("sortField", sortField);
             if (sortOrder) params.append("sortOrder", sortOrder);
             
-            // 调用 Casdoor API 获取用户
-            const response = await axios.get(
-                `${casdoorConfig.endpoint}/api/get-users?${params.toString()}`
-            );
+            // Call Casdoor API to get users
+            const url = `${casdoorConfig.endpoint}/api/get-users?${params.toString()}`;
+            console.log(`Requesting users from: ${url}`);
+            
+            const response = await axios.get(url);
 
-            if (response.status !== 200) {
-                throw new Error(`Failed to retrieve users: ${response.statusText}`);
+            // Handle potential error responses where the status is 200 but there's an error in the body
+            if (response.data?.status === "error") {
+                console.error("Casdoor API returned error:", response.data);
+                throw new Error(response.data?.msg || "Failed to retrieve users: API returned error");
+            }
+            
+            if (response.status !== 200 || response.data?.status !== "ok") {
+                throw new Error(`Failed to retrieve users: ${response.statusText || "Unknown error"}`);
             }
 
             return {
