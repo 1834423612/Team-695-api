@@ -15,6 +15,7 @@ router.get("/me", authController.getCurrentUser)
 // Protected routes
 router.get("/validate", verifyToken, authController.validateToken)
 router.post("/logout", verifyToken, authController.logout)
+router.post("/api-keys", verifyToken, authController.generateApiKey)
 
 // Admin routes
 router.post("/revoke-token", verifyToken, requireAdmin, authController.revokeSpecificToken)
