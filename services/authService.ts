@@ -732,7 +732,6 @@ class AuthService {
             }
 
             return allUsers;
-            return [];
         } catch (err) {
             console.error("Error listing users:", err);
             return [];
