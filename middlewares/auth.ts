@@ -99,13 +99,26 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
             return unauthorized(res, "Authentication required")
         }
 
-        const isAdmin =
-            req.user.role === "admin" ||
-            req.user.isAdmin === true ||
-            (req.user.groups && (
-                req.user.groups.includes("admin") ||
-                req.user.groups.includes("Team695/admin")
-            ))
+        let isAdmin = false;
+
+        // 对于 API Key 认证
+        if (req.apiAuthenticated) {
+            isAdmin = req.user.isAdmin === true || 
+                (req.user.groups && (
+                    req.user.groups.includes("admin") || 
+                    req.user.groups.includes("Team695/admin")
+                ));
+        } 
+        // 对于 JWT 认证
+        else {
+            isAdmin =
+                req.user.role === "admin" ||
+                req.user.isAdmin === true ||
+                (req.user.groups && (
+                    req.user.groups.includes("admin") ||
+                    req.user.groups.includes("Team695/admin")
+                ));
+        }
 
         if (!isAdmin) {
             return res.status(403).json({

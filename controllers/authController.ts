@@ -1,7 +1,10 @@
 import type { Request, Response } from "express"
+import axios from "axios"
+import { casdoorConfig } from "../config/casdoor"
 import authService from "../services/authService"
 import tokenBlacklist from "../services/tokenBlacklistService"
 import { success, error, unauthorized } from "../utils/responses"
+import { v4 as uuidv4 } from "uuid"
 
 class AuthController {
     /**
@@ -145,9 +148,25 @@ class AuthController {
      * Validate token
      */
     validateToken(req: Request, res: Response) {
-        // If we passed the verifyToken middleware, the token is valid
-        const isAdmin = req.user ? authService.isUserAdmin(req.decodedToken) : false
-        return success(res, { valid: true, isAdmin })
+        // 如果我们通过了 verifyToken 中间件，意味着认证有效
+        let isAdmin = false;
+
+        // 检查 API Key 认证
+        if (req.apiAuthenticated && req.user) {
+            console.log("API Key authentication detected in validateToken");
+            isAdmin = req.user.isAdmin === true || 
+                (req.user.groups && (
+                    req.user.groups.includes("admin") || 
+                    req.user.groups.includes("Team695/admin")
+                ));
+        }
+        // 检查 JWT 认证
+        else if (req.user && req.decodedToken) {
+            console.log("JWT authentication detected in validateToken");
+            isAdmin = authService.isUserAdmin(req.decodedToken);
+        }
+
+        return success(res, { valid: true, isAdmin });
     }
 
     /**
@@ -244,36 +263,112 @@ class AuthController {
      */
     async getAllUsers(req: Request, res: Response) {
         try {
-            const token = req.token
-            const { pageSize, pageNumber, sortField, sortOrder } = req.query
-
-            if (!token) {
-                return error(res, 400, "Token required")
+            // 检查用户是否已通过身份验证
+            if (!req.user) {
+                return unauthorized(res, "Authentication required");
             }
 
-            // Check if user is admin directly from token
-            if (!req.user || !req.user.isAdmin) {
-                return error(res, 403, "Admin privileges required")
+            // 确定用户是否为管理员
+            let isAdmin = false;
+
+            // 对于 API Key 认证
+            if (req.apiAuthenticated) {
+                isAdmin = req.user.isAdmin === true || 
+                    (req.user.groups && (
+                        req.user.groups.includes("admin") || 
+                        req.user.groups.includes("Team695/admin")
+                    ));
+            } 
+            // 对于 JWT 认证
+            else if (req.decodedToken) {
+                isAdmin = authService.isUserAdmin(req.decodedToken);
             }
 
-            // Call service to get users with pagination support
-            const result = await authService.getAllUsers(
-                token, 
-                pageSize ? Number(pageSize) : undefined,
-                pageNumber ? Number(pageNumber) : undefined,
-                sortField ? String(sortField) : undefined,
-                sortOrder ? String(sortOrder) : undefined
-            )
+            if (!isAdmin) {
+                return error(res, 403, "Admin privileges required");
+            }
+
+            // 获取查询参数
+            const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 100;
+            const pageNumber = req.query.pageNumber ? parseInt(req.query.pageNumber as string) : 1;
+            const sortField = req.query.sortField as string || '';
+            const sortOrder = req.query.sortOrder as string || '';
+
+            // 如果使用 API Key 认证，我们需要调用不同的方法
+            let result;
+            if (req.apiAuthenticated) {
+                console.log("Getting users with API Key authentication");
+                // 使用 API Key 和 Secret 执行 getAllUsers
+                const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
+                const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
+                result = await authService.getAllUsersWithApiKey(apiKey, apiSecret, pageSize, pageNumber, sortField, sortOrder);
+            } else {
+                console.log("Getting users with JWT authentication");
+                // 使用标准 JWT 方法
+                result = await authService.getAllUsers(req.token as string, pageSize, pageNumber, sortField, sortOrder);
+            }
 
             if (!result.success) {
-                return error(res, 500, result.message, result.error)
+                return error(res, 500, result.message || "Failed to retrieve users");
             }
 
-            return success(res, result.data)
+            return success(res, result.data);
         } catch (err) {
-            return error(res, 500, "Failed to get users", err)
+            console.error("Error getting users:", err);
+            return error(res, 500, "Failed to retrieve users", err);
+        }
+    }
+
+    /**
+     * Generate API keys for the authenticated user
+     */
+    async generateApiKey(req: Request, res: Response) {
+        try {
+            if (!req.user) {
+                return unauthorized(res, "Authentication required");
+            }
+
+            console.log("API Key generation request from user:", req.user.name || req.user.id);
+            
+            // Get authentication credentials
+            const authToken = req.token;
+            const authApiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
+            const authApiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
+            
+            if (!authToken && (!authApiKey || !authApiSecret)) {
+                return error(res, 400, "No valid authentication provided");
+            }
+
+            try {
+                // Call service to generate API keys
+                const result = await authService.generateUserApiKeys(
+                    authToken,
+                    authApiKey, 
+                    authApiSecret
+                );
+                
+                console.log("API keys generated successfully");
+                
+                // Return the new API keys
+                return success(res, { 
+                    accessKey: result.accessKey, 
+                    accessSecret: result.accessSecret,
+                    userId: result.userId,
+                    owner: result.owner,
+                    message: "API Keys generated successfully"
+                });
+            } catch (err: any) {
+                console.error("Error generating API keys:", err);
+                
+                // Provide detailed error information for debugging
+                const errorMsg = err.response?.data?.msg || err.message || "Unknown error";
+                return error(res, 500, `Failed to generate API keys: ${errorMsg}`, err);
+            }
+        } catch (err) {
+            console.error("Error in API key generation process:", err);
+            return error(res, 500, "Failed to generate API keys", err);
         }
     }
 }
 
-export default new AuthController()
+export default new AuthController();
