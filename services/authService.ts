@@ -767,13 +767,30 @@ class AuthService {
             // 获取完整的用户信息，无论使用哪种认证方式
             if (authToken) {
                 // 使用 JWT 获取用户信息
-                const decodedToken = this.parseJwtToken(authToken);
-                const userId = decodedToken.payload.sub || decodedToken.payload.name || '';
-                const userOwner = decodedToken.payload.owner || casdoorConfig.orgName;
-                const fullId = this.normalizeUserId(userId);
-                
-                // 获取完整的用户对象
                 try {
+                    // 解析 JWT 令牌获取基本用户信息
+                    const decodedToken = this.parseJwtToken(authToken);
+                    console.log("JWT decoded successfully, payload:", JSON.stringify(decodedToken.payload).substring(0, 100) + "...");
+                    
+                    // 从令牌中获取用户名和组织
+                    let userName = decodedToken.payload.name;
+                    const userOwner = decodedToken.payload.owner || casdoorConfig.orgName;
+                    
+                    // 如果没有找到 name，尝试使用 preferred_username 或 sub
+                    if (!userName) {
+                        userName = decodedToken.payload.preferred_username || decodedToken.payload.sub;
+                        console.log(`Name not found in token, using alternative: ${userName}`);
+                    }
+                    
+                    if (!userName) {
+                        throw new Error("Could not determine username from JWT token");
+                    }
+                    
+                    // 构建完整的用户 ID
+                    const fullId = `${userOwner}/${userName}`;
+                    console.log(`Constructed user ID: ${fullId}`);
+                    
+                    // 调用 Casdoor API 获取完整的用户对象
                     const userResponse = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}`,
                         {
@@ -788,10 +805,46 @@ class AuthService {
                         completeUserInfo = userResponse.data.data;
                         console.log("Retrieved complete user info for JWT user");
                     } else {
-                        throw new Error("Failed to get complete user info");
+                        // 如果第一次尝试失败，使用 /api/get-account 端点
+                        console.log("Failed to get user info directly, trying with /api/get-account");
+                        const accountResponse = await axios.get(
+                            `${casdoorConfig.endpoint}/api/get-account`,
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${authToken}`,
+                                    "Content-Type": "application/json"
+                                }
+                            }
+                        );
+                        
+                        if (accountResponse.data?.status === "ok") {
+                            const accountInfo = accountResponse.data;
+                            const accountUserId = `${accountInfo.data?.owner || casdoorConfig.orgName}/${accountInfo.name}`;
+                            
+                            // 使用 account API 返回的用户 ID 获取完整用户信息
+                            const secondUserResponse = await axios.get(
+                                `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(accountUserId)}`,
+                                {
+                                    headers: {
+                                        Authorization: `Bearer ${authToken}`,
+                                        "Content-Type": "application/json"
+                                    }
+                                }
+                            );
+                            
+                            if (secondUserResponse.data?.status === "ok" && secondUserResponse.data.data) {
+                                completeUserInfo = secondUserResponse.data.data;
+                                console.log("Retrieved user info using account API");
+                            } else {
+                                throw new Error("Failed to get user information with account API");
+                            }
+                        } else {
+                            throw new Error("Failed to get user information with JWT token");
+                        }
                     }
                 } catch (err) {
-                    console.error("Error getting complete user info with JWT:", err);
+                    console.error("Error getting JWT user info:", err);
+                    console.error("Token (first 20 chars):", authToken?.substring(0, 20));
                     throw new Error("Failed to get user details required for API key generation");
                 }
             } else if (authApiKey && authApiSecret) {
