@@ -443,7 +443,7 @@ class AuthService {
                 `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
             );
             
-            if (accountResponse.status !== 200 || accountResponse.data.status !== "ok") {
+            if (accountResponse.status !== 200 || accountResponse.data?.status !== "ok") {
                 throw new Error("Failed to verify account information");
             }
             
@@ -451,7 +451,7 @@ class AuthService {
             const userData = accountResponse.data;
             const userOwner = userData.data?.owner || casdoorConfig.orgName;
             const isAdmin = userData.data?.isAdmin === true || 
-                (userData.data?.groups && userData.data.groups.includes("Team695/admin"));
+                (userData.data?.groups?.groups.includes("Team695/admin"));
             
             if (!isAdmin) {
                 throw new Error("Only administrators can access user list");
@@ -570,7 +570,7 @@ class AuthService {
                         console.log("Attempting to find user by listing all users and matching Google ID...");
                         // 通过列出用户尝试查找匹配的 Google ID
                         const users = await this.listAllUsers(apiKey, apiSecret, token);
-                        console.log(`Retrieved ${users.length} users to search for Google ID match`);
+                        console.log(`Retrieved ${users?.length} users to search for Google ID match`);
                         const foundUser = users.find((u: any) => u.id === userId || u.google === userId);
                         
                         if (foundUser) {
@@ -692,27 +692,46 @@ class AuthService {
      */
     async listAllUsers(apiKey?: string, apiSecret?: string, token?: string): Promise<any[]> {
         try {
-            let response;
-            if (apiKey && apiSecret) {
-                response = await axios.get(
-                    `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=1000&p=1&accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`);
-            } else if (token) {
-                response = await axios.get(
-                    `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=1000&p=1`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json"
+            const pageSize = 1000;
+            let allUsers: any[] = [];
+            let pageNum = 1;
+            let hasMore = true;
+
+            while (hasMore) {
+                let response;
+                if (apiKey && apiSecret) {
+                    response = await axios.get(
+                        `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=${pageSize}&p=${pageNum}&accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`);
+                } else if (token) {
+                    response = await axios.get(
+                        `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=${pageSize}&p=${pageNum}`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json"
+                            }
                         }
+                    );
+                } else {
+                    throw new Error("No authentication provided");
+                }
+
+                if (response.status === 200 && response.data.status === "ok" && response.data.data) {
+                    const users = response.data.data;
+                    allUsers = [...allUsers, ...users];
+
+                    // If we received fewer users than the page size, we've reached the end
+                    if (users.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        pageNum++;
                     }
-                );
-            } else {
-                throw new Error("No authentication provided");
+                } else {
+                    hasMore = false;
+                }
             }
-            
-            if (response.status === 200 && response.data.status === "ok" && response.data.data) {
-                return response.data.data;
-            }
+
+            return allUsers;
             return [];
         } catch (err) {
             console.error("Error listing users:", err);
