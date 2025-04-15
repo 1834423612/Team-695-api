@@ -532,8 +532,11 @@ paths:
 
   /auth/me:
     get:
-      summary: Get current user info
-      description: Retrieve the current user's information using the provided JWT token or API Key
+      summary: Get current user info (Local validation only)
+      description: |
+        Retrieves the current user's information using the provided JWT token or API Key.
+        Note: This endpoint only performs local JWT validation and does not verify with the Casdoor server if the token has been revoked.
+        For security-critical operations, use `/auth/validate` to verify token validity with the server.
       tags:
         - Auth
       security:
@@ -548,7 +551,7 @@ paths:
           description: JWT Token (optional, if not provided in Authorization header)
       responses:
         '200':
-          description: User information retrieved successfully
+          description: User information retrieved successfully (based on local validation only)
           content:
             application/json:
               schema:
@@ -559,7 +562,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/UserInfo'
         '401':
-          description: Unauthorized
+          description: Unauthorized - Token format is invalid or missing
           content:
             application/json:
               schema:
@@ -573,8 +576,11 @@ paths:
 
   /auth/validate:
     get:
-      summary: Validate JWT token or API Key
-      description: Validate the provided JWT token or API Key and return the result
+      summary: Validate JWT token or API Key with server
+      description: |
+        Performs a complete validation of the provided JWT token or API Key by verifying with the Casdoor server.
+        This endpoint checks if the token has been revoked, is still active, and returns its admin status.
+        Use this endpoint for security-critical operations requiring full token validation.
       tags:
         - Auth
       security:
@@ -587,9 +593,15 @@ paths:
           schema:
             type: string
           description: JWT Token (optional, if not provided in Authorization header)
+        - in: query
+          name: bypassCache
+          schema:
+            type: boolean
+            default: false
+          description: Force verification with server, bypassing cached results
       responses:
         '200':
-          description: Token is valid
+          description: Token is valid according to server verification
           content:
             application/json:
               schema:
@@ -604,8 +616,14 @@ paths:
                             type: boolean
                           isAdmin:
                             type: boolean
+                          tokenStatus:
+                            type: string
+                            enum: [active]
+                          fromCache:
+                            type: boolean
+                            description: Indicates if the result came from cache
         '401':
-          description: Unauthorized
+          description: Unauthorized - Token is invalid, expired, or has been revoked on the server
           content:
             application/json:
               schema:
