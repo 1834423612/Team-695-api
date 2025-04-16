@@ -43,13 +43,24 @@ publicRouter.get('/event/:eventKey', async (req, res) => {
 // Helper function to update pit-scouting status
 async function updatePitStatus(res: express.Response, eventKey: string, identifier: string, isPit: boolean, isTeamNumber: boolean = false) {
     try {
-        // Query condition depends on whether we're using team_key or team_number
-        const queryField = isTeamNumber ? 'team_number' : 'team_key';
+        // Process the identifier to support both "frc555" and "555" formats
+        let processedIdentifier = identifier;
+        let queryField = isTeamNumber ? 'team_number' : 'team_key';
+        
+        // If not team number and identifier is pure number, add "frc" prefix
+        if (!isTeamNumber && !identifier.startsWith('frc') && /^\d+$/.test(identifier)) {
+            processedIdentifier = `frc${identifier}`;
+        }
+        
+        // If it's team number and identifier starts with "frc", remove the prefix
+        if (isTeamNumber && identifier.startsWith('frc')) {
+            processedIdentifier = identifier.substring(3);
+        }
         
         // Update database
         const [result] = await pool.query(
             `UPDATE team_matches SET is_pit = ? WHERE event_key = ? AND ${queryField} = ?`,
-            [isPit, eventKey, identifier]
+            [isPit, eventKey, processedIdentifier]
         );
 
         // @ts-ignore
@@ -60,7 +71,7 @@ async function updatePitStatus(res: express.Response, eventKey: string, identifi
         // Get updated team data
         const [rows] = await pool.query<any[]>(
             `SELECT * FROM team_matches WHERE event_key = ? AND ${queryField} = ?`,
-            [eventKey, identifier]
+            [eventKey, processedIdentifier]
         );
         
         // Convert is_pit from 0/1 to boolean
