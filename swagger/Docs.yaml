@@ -1070,13 +1070,9 @@ paths:
   /event/event-id:
     get:
       summary: Get current event ID
-      description: Retrieve the ID of the most recent event
+      description: Retrieve the ID of the most recent event (public endpoint)
       tags:
         - Events
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
       responses:
         '200':
           description: Event ID retrieved successfully
@@ -1135,10 +1131,6 @@ paths:
       description: Submit a new survey response for an event
       tags:
         - Surveys
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
       requestBody:
         required: true
         content:
@@ -1160,12 +1152,6 @@ paths:
                         properties:
                           message:
                             type: string
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
@@ -1179,10 +1165,6 @@ paths:
       description: Query survey responses with optional filtering
       tags:
         - Surveys
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
       parameters:
         - in: query
           name: eventId
@@ -1213,12 +1195,6 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/SurveyResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:

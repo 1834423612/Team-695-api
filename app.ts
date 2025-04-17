@@ -72,22 +72,47 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: tr
 // API Endpoint routes
 const apiRouter = express.Router()
 
-// Public routes
+// 所有公共路由 - 无需认证
 apiRouter.use("/auth", authRoutes)
 apiRouter.use("/team", teamRoutes)
-apiRouter.use("/webhook", webhookRoutes) // 添加webhook路由
-apiRouter.use("/team-matches", publicTeamMatchesRoutes) // Add public team-matches routes
+apiRouter.use("/webhook", webhookRoutes)
+apiRouter.use("/team-matches", publicTeamMatchesRoutes)
+apiRouter.use("/event-id", eventRoutes)
+apiRouter.use("/event", eventRoutes)  // 现在所有event路由都无需认证
+apiRouter.use("/survey", surveyRoutes) // 问卷路由暂时无需认证
+apiRouter.use("/upload", uploadRoutes) // 上传路由暂时无需认证
+apiRouter.use("/assignments", assignmentRoutes) // 任务路由暂时无需认证
+apiRouter.use("/team-matches", protectedTeamMatchesRoutes) // 所有团队匹配路由暂时无需认证
 
-// 公共路由
-apiRouter.use("/event-id", eventRoutes) // Event ID route
+// 只有删除操作需要认证 - 通过特定的路由处理
+apiRouter.use("/upload/images", verifyToken); // 删除图片需要认证
+apiRouter.use("/assignments/:id", (req, res, next) => {
+    if (req.method === 'DELETE') {
+        // If verifyToken is an array, apply the middleware
+        if (Array.isArray(verifyToken)) {
+            // Create a middleware chain
+            let idx = 0;
+            const runMiddleware = () => {
+                if (idx < verifyToken.length) {
+                    verifyToken[idx](req, res, () => {
+                        idx++;
+                        runMiddleware();
+                    });
+                } else {
+                    next();
+                }
+            };
+            runMiddleware();
+        } else {
+            next();
+        }
+    } else {
+        next();
+    }
+});
 
-// Protected routes - 现在这些路由既可以用 JWT 也可以用 API Key 访问
-apiRouter.use("/event", verifyToken, eventRoutes)
-apiRouter.use("/survey", verifyToken, surveyRoutes)
-apiRouter.use("/upload", verifyToken, uploadRoutes)
-apiRouter.use("/assignments", verifyToken, assignmentRoutes)
-apiRouter.use("/team-matches", verifyToken, protectedTeamMatchesRoutes) // Add protected team-matches routes
-apiRouter.use("/", feedbackRoutes) // Feedback routes have their own protection
+// 反馈路由有自己的保护机制
+apiRouter.use("/", feedbackRoutes)
 
 // Use the apiRouter for all API routes
 app.use("/", apiRouter) // Allow routes with `/` prefix
