@@ -48,32 +48,9 @@ class AuthController {
             console.log("getCurrentUser called with headers:", req.headers);
             console.log("API authenticated:", req.apiAuthenticated);
 
-            // 检查 API Key 授权 - 先查看是否已由中间件验证过
-            if (req.apiAuthenticated && req.user) {
-                console.log("User authenticated via API Key middleware");
-                return success(res, req.user);
-            }
-
-            // 直接从请求中检查 API Key
-            const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
-            const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
-
-            if (apiKey && apiSecret) {
-                console.log("Found API Key in request, attempting direct authentication");
-                try {
-                    // 使用 API Key 和 Secret 从 Casdoor 获取用户信息
-                    const userData = await authService.getUserInfoWithApiKey(apiKey, apiSecret);
-                    return success(res, userData);
-                } catch (apiErr) {
-                    console.error("API Key direct authentication failed:", apiErr);
-                }
-            }
-            
-            // 如果没有 API Key 或 API Key 验证失败，则尝试 JWT 验证
-            
-            // First check if middleware has already set user information via JWT
+            // 检查是否已由中间件验证过 - JWT或API Key
             if (req.user) {
-                console.log("User authenticated via JWT middleware");
+                console.log("User already authenticated via middleware");
                 return success(res, req.user);
             }
 
@@ -99,35 +76,92 @@ class AuthController {
                 token = req.token;
             }
 
-            if (!token) {
-                return unauthorized(res, "Please provide a valid JWT token or API Key/Secret");
-            }
-
-            // Check if token is blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
-            if (isBlacklisted) {
-                return unauthorized(res, "Token has been revoked");
-            }
-
-            // Try to parse the token
-            try {
-                const decodedToken = authService.parseJwtToken(token);
-
-                // Validate token content
-                if (!decodedToken || !decodedToken.payload) {
-                    return unauthorized(res, "Token content is invalid");
+            // 如果有token，先检查本地黑名单，再进行远程验证
+            if (token) {
+                // 检查本地黑名单
+                const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+                if (isBlacklisted) {
+                    return unauthorized(res, "Token has been revoked");
                 }
 
-                // Set user information to request object for future use
-                req.user = decodedToken.payload;
-                req.token = token;
-                req.decodedToken = decodedToken;
-
-                return success(res, decodedToken.payload);
-            } catch (tokenError) {
-                console.error("Token parsing error:", tokenError);
-                return unauthorized(res, (tokenError as Error).message);
+                // 先尝试本地解析以获取基础信息
+                try {
+                    const decodedToken = authService.parseJwtToken(token);
+                    
+                    // 验证token内容
+                    if (!decodedToken || !decodedToken.payload) {
+                        return unauthorized(res, "Token content is invalid");
+                    }
+                    
+                    // 执行远程验证以检查token在Casdoor是否被撤销
+                    try {
+                        // 使用validate-token端点验证JWT，不会创建新token
+                        const axiosOptions = {
+                            timeout: 3000,
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        };
+                        
+                        // 执行验证
+                        const response = await axios.post(
+                            `${casdoorConfig.endpoint}/api/user`,
+                            { token: token },
+                            axiosOptions
+                        );
+                        
+                        const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
+                        
+                        if (!tokenIsActive) {
+                            // token在Casdoor已被撤销，添加到本地黑名单
+                            await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
+                            console.log("Token was revoked on Casdoor, adding to local blacklist");
+                            return unauthorized(res, "Token has been revoked on authentication server");
+                        }
+                        
+                        // 验证通过，返回用户信息
+                        req.user = decodedToken.payload;
+                        req.token = token;
+                        req.decodedToken = decodedToken;
+                        
+                        return success(res, decodedToken.payload);
+                    } catch (validationError) {
+                        console.error("Remote token validation error:", validationError);
+                        
+                        // 如果是服务器错误且设置了降级验证，使用本地验证结果
+                        if (process.env.TOKEN_VALIDATION_FALLBACK === "true" && axios.isAxiosError(validationError)) {
+                            console.log("Using fallback validation due to remote validation error");
+                            req.user = decodedToken.payload;
+                            req.token = token;
+                            req.decodedToken = decodedToken;
+                            return success(res, decodedToken.payload, "Warning: Using local validation only");
+                        }
+                        
+                        return unauthorized(res, "Token validation failed");
+                    }
+                    
+                } catch (tokenError) {
+                    console.error("Token parsing error:", tokenError);
+                    // 本地解析失败，继续检查API Key
+                }
             }
+
+            // 如果没有有效token，尝试API Key
+            const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
+            const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
+
+            if (apiKey && apiSecret) {
+                console.log("Found API Key in request, attempting authentication");
+                try {
+                    // 使用 API Key 和 Secret 从 Casdoor 获取用户信息
+                    const userData = await authService.getUserInfoWithApiKey(apiKey, apiSecret);
+                    return success(res, userData);
+                } catch (apiErr) {
+                    console.error("API Key authentication failed:", apiErr);
+                }
+            }
+            
+            return unauthorized(res, "Please provide a valid JWT token or API Key/Secret");
         } catch (err) {
             console.error("Error in getCurrentUser:", err);
             return error(res, 500, "Failed to get user information", err);
@@ -160,8 +194,7 @@ class AuthController {
 
     /**
      * Validate token
-     * Checks not only token format but also verifies with Casdoor that the token is still valid
-     * Includes resilience strategies: timeouts, retries, and caching
+     * Always verifies with Casdoor that the token is still valid using methods that don't create new tokens
      */
     async validateToken(req: Request, res: Response) {
         try {
@@ -174,8 +207,11 @@ class AuthController {
                 ? `apikey:${req.headers["x-api-key"] || req.query.accessKey}`
                 : `jwt:${req.token?.substring(0, 20)}`;
                 
-            // 首先检查缓存 - 从 req 对象获取缓存，如果有的话
-            const cachedResult = req.tokenCache?.[cacheKey];
+            // 检查是否需要绕过缓存（强制验证）
+            const bypassCache = req.query.bypassCache === 'true';
+                
+            // 首先检查缓存 - 从 req 对象获取缓存，如果有的话且未要求绕过缓存
+            const cachedResult = !bypassCache && req.tokenCache?.[cacheKey];
             if (cachedResult && cachedResult.expiry > Date.now()) {
                 console.log(`Using cached token validation result for ${cacheKey}`);
                 return success(res, {
@@ -190,13 +226,12 @@ class AuthController {
             if (req.apiAuthenticated && req.user) {
                 console.log("API Key authentication detected in validateToken");
                 
-                // 验证API Key是否仍然有效（调用Casdoor API）
                 try {
                     const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
                     const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
                     
                     if (apiKey && apiSecret) {
-                        // 设置超时和重试选项
+                        // 使用validate-credentials端点验证API Key，而不是生成新token的get-account
                         const axiosOptions = {
                             timeout: 3000, // 3秒超时
                             headers: {
@@ -204,41 +239,24 @@ class AuthController {
                             }
                         };
                         
-                        // 实施重试逻辑
-                        let retries = 0;
-                        const maxRetries = 2;
-                        let accountResponse;
+                        // 执行验证
+                        const response = await axios.post(
+                            `${casdoorConfig.endpoint}/api/validate-credentials`,
+                            { 
+                                type: "api-key", 
+                                key: apiKey, 
+                                secret: apiSecret 
+                            },
+                            axiosOptions
+                        );
                         
-                        while (retries <= maxRetries) {
-                            try {
-                                // 尝试使用API Key获取账户信息来验证其仍然有效
-                                accountResponse = await axios.get(
-                                    `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`,
-                                    axiosOptions
-                                );
-                                break; // 成功则跳出循环
-                            } catch (retryError) {
-                                if (retries === maxRetries) throw retryError;
-                                retries++;
-                                console.log(`API Key validation retry ${retries}/${maxRetries}`);
-                                // 指数退避策略
-                                await new Promise(r => setTimeout(r, 1000 * retries));
-                            }
-                        }
-                        
-                        tokenIsActive = accountResponse?.status === 200 && accountResponse.data?.status === "ok";
+                        tokenIsActive = response?.status === 200 && response.data?.status === "ok";
                         console.log(`API Key validation result: ${tokenIsActive ? 'valid' : 'invalid'}`);
                     }
                 } catch (error) {
                     console.error("Error validating API key with Casdoor:", error);
-                    // 在出错情况下，如果本地解码验证成功，我们暂时认为令牌有效
-                    // 这提高了在Casdoor服务中断时的系统可用性
-                    if (process.env.TOKEN_VALIDATION_FALLBACK === "true") {
-                        console.log("Using fallback validation for API Key due to Casdoor service issues");
-                        tokenIsActive = true; 
-                    } else {
-                        tokenIsActive = false;
-                    }
+                    // 远程验证失败时，标记为无效
+                    tokenIsActive = false;
                 }
                 
                 // 检查是否为管理员
@@ -252,53 +270,33 @@ class AuthController {
             else if (req.user && req.decodedToken && req.token) {
                 console.log("JWT authentication detected in validateToken");
                 
-                // 调用Casdoor验证令牌是否仍然有效
                 try {
-                    // 设置超时和重试选项
+                    // 使用正确的Casdoor端点验证JWT，而不是不存在的validate-token
                     const axiosOptions = {
                         timeout: 3000, // 3秒超时
                         headers: {
-                            Authorization: `Bearer ${req.token}`,
+                            "Authorization": `Bearer ${req.token}`,
                             "Content-Type": "application/json"
                         }
                     };
                     
-                    // 实施重试逻辑
-                    let retries = 0;
-                    const maxRetries = 2;
-                    let response;
+                    // 使用/api/user端点验证token
+                    const response = await axios.get(
+                        `${casdoorConfig.endpoint}/api/user`,
+                        axiosOptions
+                    );
                     
-                    while (retries <= maxRetries) {
-                        try {
-                            // 使用令牌调用 Casdoor 的 get-account 端点来验证令牌有效性
-                            response = await axios.get(`${casdoorConfig.endpoint}/api/get-account`, axiosOptions);
-                            break; // 成功则跳出循环
-                        } catch (retryError) {
-                            if (retries === maxRetries) throw retryError;
-                            retries++;
-                            console.log(`JWT validation retry ${retries}/${maxRetries}`);
-                            // 指数退避策略
-                            await new Promise(r => setTimeout(r, 1000 * retries));
-                        }
-                    }
-                    
+                    // 只要能成功获取数据且状态是ok，就说明token有效
                     tokenIsActive = response?.status === 200 && response.data?.status === "ok";
                     console.log(`JWT validation result with Casdoor: ${tokenIsActive ? 'valid' : 'invalid'}`);
                 } catch (error) {
                     console.error("Error validating JWT with Casdoor:", error);
-                    // 在出错情况下，如果本地解码验证成功（且未过期），我们暂时认为令牌有效
-                    // 这提高了在Casdoor服务中断时的系统可用性
-                    if (process.env.TOKEN_VALIDATION_FALLBACK === "true") {
-                        const currentTime = Math.floor(Date.now() / 1000);
-                        const tokenExpiry = req.decodedToken.payload.exp;
-                        if (tokenExpiry && tokenExpiry > currentTime) {
-                            console.log("Using fallback validation for JWT due to Casdoor service issues");
-                            tokenIsActive = true;
-                        } else {
-                            tokenIsActive = false;
-                        }
-                    } else {
-                        tokenIsActive = false;
+                    // 返回401或其他错误，表示token无效
+                    tokenIsActive = false;
+                    
+                    // 记录详细的错误信息
+                    if (axios.isAxiosError(error) && error.response) {
+                        console.log(`Casdoor response: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
                     }
                 }
                 
@@ -313,7 +311,6 @@ class AuthController {
             }
             
             // 如果验证成功，在返回结果前将结果保存到缓存
-            // 这里假设某种缓存中间件或全局对象处理缓存
             const cacheExpiry = Date.now() + (5 * 60 * 1000); // 5分钟有效期
             if (req.tokenCache) {
                 req.tokenCache[cacheKey] = {

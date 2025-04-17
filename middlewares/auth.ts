@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from "express"
+import axios from "axios"
+import { casdoorConfig } from "../config/casdoor"
 import authService from "../services/authService"
 import tokenBlacklist from "../services/tokenBlacklistService"
 import { unauthorized } from "../utils/responses"
@@ -68,6 +70,47 @@ export const verifyToken = [
                 const currentTime = Math.floor(Date.now() / 1000)
                 if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
                     return unauthorized(res, "Token expired")
+                }
+
+                // 远程验证token是否被撤销
+                try {
+                    // 使用Casdoor的正确验证方式
+                    const response = await axios.get(
+                        `${casdoorConfig.endpoint}/api/user`,
+                        { 
+                            timeout: 3000,
+                            headers: { 
+                                "Authorization": `Bearer ${token}`,
+                                "Content-Type": "application/json" 
+                            }
+                        }
+                    );
+                    
+                    const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
+                    
+                    if (!tokenIsActive) {
+                        // Token无效，添加到本地黑名单
+                        await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
+                        console.log("Token is invalid (response not ok), adding to local blacklist");
+                        return unauthorized(res, "Token is invalid");
+                    }
+                } catch (validationError) {
+                    console.error("Remote token validation error in middleware:", validationError);
+                    
+                    // 检查是否是401错误，表示token被撤销或无效
+                    if (axios.isAxiosError(validationError) && validationError.response && validationError.response.status === 401) {
+                        // 添加到本地黑名单
+                        await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
+                        console.log("Token was revoked or invalid (401 from Casdoor), adding to local blacklist");
+                        return unauthorized(res, "Token is invalid or has been revoked");
+                    }
+                    
+                    // 如果未设置降级验证，则认为token无效
+                    if (process.env.TOKEN_VALIDATION_FALLBACK !== "true") {
+                        return unauthorized(res, "Token validation failed");
+                    }
+                    
+                    console.log("Using local validation only due to remote validation error");
                 }
 
                 // Attach decoded token and user information to request object
