@@ -78,6 +78,9 @@ apiRouter.use("/team", teamRoutes)
 apiRouter.use("/webhook", webhookRoutes) // 添加webhook路由
 apiRouter.use("/team-matches", publicTeamMatchesRoutes) // Add public team-matches routes
 
+// 公共路由
+apiRouter.use("/event-id", eventRoutes) // Event ID route
+
 // Protected routes - 现在这些路由既可以用 JWT 也可以用 API Key 访问
 apiRouter.use("/event", verifyToken, eventRoutes)
 apiRouter.use("/survey", verifyToken, surveyRoutes)
