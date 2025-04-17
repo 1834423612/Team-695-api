@@ -1,5 +1,8 @@
 import express from 'express';
 import pool from '../config/database';
+import { verifyToken } from '../middlewares/auth';
+import { success, error } from '../utils/responses';
+
 const router = express.Router();
 
 interface Tab {
@@ -17,6 +20,10 @@ interface Images {
     fullRobotImages: ImageData[];
     driveTrainImages: ImageData[];
 }
+
+// 在需要认证的路由上应用 verifyToken 中间件
+router.use('/submit', verifyToken);
+router.use('/query', verifyToken);
 
 // 提交问卷 API
 /*
@@ -63,10 +70,10 @@ router.post('/submit', async (req, res) => {
             );
         }
 
-        res.status(200).json({ message: 'Survey submitted successfully' });
-    } catch (error) {
-        console.error('Error submitting survey:', error);
-        res.status(500).json({ error: 'Failed to submit survey' });
+        return success(res, { message: 'Survey submitted successfully' }, 'Survey submitted successfully');
+    } catch (err) {
+        console.error('Error submitting survey:', err);
+        return error(res, 500, 'Failed to submit survey', err);
     }
 });
 
@@ -101,10 +108,10 @@ router.get('/query', async (req, res) => {
 
     try {
         const [rows]: any = await pool.query(query, queryParams);
-        res.json(rows);
-    } catch (error) {
-        console.error('Error querying survey responses:', error);
-        res.status(500).json({ error: 'Failed to query survey responses' });
+        return success(res, rows, 'Survey responses retrieved successfully');
+    } catch (err) {
+        console.error('Error querying survey responses:', err);
+        return error(res, 500, 'Failed to query survey responses', err);
     }
 });
 

@@ -1617,7 +1617,7 @@ paths:
   /team-matches/pit-status/{eventKey}/{teamKey}:
     put:
       summary: Update pit-scouting status by team key
-      description: Update pit-scouting status for a team using team key
+      description: Update pit-scouting status for a team using team key. Accepts both formats "frc695" or "695"
       tags:
         - TeamMatches
       security:
@@ -1636,7 +1636,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Team key (e.g., frc695)
+          description: Team key (e.g., frc695 or 695, both formats are accepted)
       requestBody:
         required: true
         content:
@@ -1689,7 +1689,7 @@ paths:
   /team-matches/pit-status/{eventKey}/{teamNumber}:
     put:
       summary: Update pit-scouting status by team number
-      description: Update pit-scouting status for a team using team number
+      description: Update pit-scouting status for a team using team number. Accepts both formats "frc695" or "695"
       tags:
         - TeamMatches
       security:
@@ -1708,7 +1708,7 @@ paths:
           required: true
           schema:
             type: string
-          description: Team number (e.g., 695)
+          description: Team number (e.g., 695 or frc695, both formats are accepted)
       requestBody:
         required: true
         content:
