@@ -1088,13 +1088,9 @@ paths:
   /event/event-id:
     get:
       summary: Get current event ID
-      description: Retrieve the ID of the most recent event
+      description: Retrieve the ID of the most recent event (public endpoint)
       tags:
         - Events
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
       responses:
         '200':
           description: Event ID retrieved successfully
