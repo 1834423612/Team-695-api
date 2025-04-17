@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from "express"
+import axios from "axios"
+import { casdoorConfig } from "../config/casdoor"
 import authService from "../services/authService"
 import tokenBlacklist from "../services/tokenBlacklistService"
 import { unauthorized } from "../utils/responses"
@@ -41,38 +43,43 @@ export const verifyToken = [
                 token = req.query.token as string
             }
 
-            // If not found in query parameters, check if already set in request object
-            if (!token && req.token) {
-                token = req.token
+            // If still not found, check in cookie
+            if (!token && req.cookies) {
+                token = req.cookies.token
             }
 
-            // If token not found by any method, return unauthorized error
+            // No token found, return unauthorized
             if (!token) {
-                return unauthorized(res, "No token provided")
+                return unauthorized(res, "No authentication token provided")
             }
 
-            // Check if token is blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+            // Check if token is in blacklist
+            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
             if (isBlacklisted) {
                 return unauthorized(res, "Token has been revoked")
             }
 
-            // Set token to request object
-            req.token = token
-
-            // Parse and verify token
             try {
+                // 只进行本地解析验证，确保token是由Casdoor签发的
                 const decodedToken = authService.parseJwtToken(token)
-
-                // Check if token is expired
-                const currentTime = Math.floor(Date.now() / 1000)
-                if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
-                    return unauthorized(res, "Token expired")
+                
+                // 验证基本的token结构
+                if (!decodedToken || !decodedToken.payload) {
+                    return unauthorized(res, "Invalid token format")
                 }
+                
+                // 验证token是否过期
+                const currentTime = Math.floor(Date.now() / 1000)
+                if (decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
+                    return unauthorized(res, "Token has expired")
+                }
+                
+                // 不再进行远程验证，只依赖本地验证结果
 
                 // Attach decoded token and user information to request object
                 req.decodedToken = decodedToken
                 req.user = decodedToken.payload
+                req.token = token
 
                 next()
             } catch (tokenError) {
@@ -81,11 +88,7 @@ export const verifyToken = [
             }
         } catch (error) {
             console.error("Token verification error:", error)
-            return res.status(500).json({
-                success: false,
-                message: "Verification failed",
-                error: (error as Error).message
-            })
+            return unauthorized(res, "Failed to verify token")
         }
     }
 ]
