@@ -130,3 +130,4 @@ dist
 .pnp.*
 teamapi.sql
 pnpm-lock.yaml
+package-lock.json
