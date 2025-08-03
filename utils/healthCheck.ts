@@ -146,7 +146,14 @@ async function checkDatabaseHealth(): Promise<ServiceStatus> {
     try {
         const startTime = performance.now()
         // Substitute with your database connection logic
-        const db = require('../../config/database') // If you have a database connection setup
+        const dbConfigPath = path.resolve(__dirname, '../../config/database')
+        if (!fs.existsSync(dbConfigPath)) {
+            return {
+                status: 'unhealthy',
+                message: 'Database config file not found'
+            }
+        }
+        const db = require(dbConfigPath) // If you have a database connection setup
         await db.query('SELECT 1')
         const responseTime = Math.round((performance.now() - startTime) * 100) / 100
         
