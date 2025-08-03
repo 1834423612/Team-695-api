@@ -43,7 +43,48 @@ dotenv.config()
 const app = express()
 
 // Security middleware
-app.use(helmet())
+if (process.env.NODE_ENV === "production") {
+    app.use(helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: [
+                    "'self'", 
+                    "'unsafe-inline'", 
+                    "https://fonts.googleapis.com",
+                    "https://cdn.tailwindcss.com"
+                ],
+                scriptSrc: [
+                    "'self'", 
+                    "'unsafe-inline'", 
+                    "https://cdn.tailwindcss.com",
+                    "https://code.iconify.design"
+                ],
+                fontSrc: [
+                    "'self'", 
+                    "https://fonts.gstatic.com",
+                    "https://fonts.googleapis.com"
+                ],
+                connectSrc: [
+                    "'self'",
+                    "https://api.iconify.design"
+                ],
+                imgSrc: [
+                    "'self'", 
+                    "data:", 
+                    "https:"
+                ],
+                objectSrc: ["'none'"]
+            },
+        }
+    }))
+} else {
+    // Disable Content Security Policy (CSP) in development for easier debugging
+    app.use(helmet({
+        contentSecurityPolicy: false
+    }))
+}
+
 
 // Logging middleware
 app.use(morgan("combined"))
