@@ -72,7 +72,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
             success: true,
             status: "healthy",
             message: "Team 695 API is running",
-            version: "1.2.6",
+            version: pkg.version,
             timestamp: new Date().toISOString(),
             uptime: {
                 process: Math.floor(process.uptime()),
