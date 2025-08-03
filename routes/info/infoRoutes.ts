@@ -3,14 +3,15 @@ import fs from 'fs'
 import path from 'path'
 import { getSwaggerDoc } from '../../utils/swaggerCache'
 
+// Use cached packageJson
+const packageJson = require('../../package.json');
+
 const router = express.Router()
 
 // Route to get API information
 router.get('/api-info', (req, res) => {
     try {
         const swaggerDoc = getSwaggerDoc()
-        // Use cached packageJson
-        
         const apiInfo = {
             name: swaggerDoc.info?.title || packageJson.name || 'Team 695 API',
             description: swaggerDoc.info?.description || packageJson.description || 'Team 695 Robotics API Server',

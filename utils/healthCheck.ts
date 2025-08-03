@@ -2,7 +2,8 @@ import os from 'os'
 import fs from 'fs'
 import path from 'path'
 import { performance } from 'perf_hooks'
-import pkg from '../../package.json' assert { type: 'json' }
+
+const pkg = require('../package.json');
 
 export interface HealthCheckResult {
     success: boolean
