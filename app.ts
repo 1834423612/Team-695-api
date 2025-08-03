@@ -18,6 +18,12 @@ declare global {
             rawBody?: string;
             rawBodyBuffer?: Buffer;
         }
+        interface Response {
+            locals: {
+                nonce?: string;
+                [key: string]: any;
+            };
+        }
     }
 }
 
@@ -60,7 +66,7 @@ if (process.env.NODE_ENV === "production") {
                 styleSrc: [
                     "'self'",
                     // Allow styles with nonce
-                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    (req: any, res: any) => `'nonce-${res.locals.nonce}'`,
                     "https://fonts.googleapis.com",
                     "https://cdn.tailwindcss.com",
                     "https://cdn.jsdelivr.net",
@@ -69,7 +75,7 @@ if (process.env.NODE_ENV === "production") {
                 scriptSrc: [
                     "'self'",
                     // Allow scripts with nonce
-                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    (req: any, res: any) => `'nonce-${res.locals.nonce}'`,
                     "https://cdn.tailwindcss.com",
                     "https://code.iconify.design",
                     "https://cdn.jsdelivr.net",

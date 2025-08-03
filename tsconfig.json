@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "moduleResolution": "node"
   },
   "include": [
@@ -14,7 +15,8 @@
     "src/types/**/*",
     "./**/*",
     "./**/*.ts",
-    "app.ts"
+    "app.ts",
+    "**/*.json"
   ],
   "exclude": ["node_modules"]
 }
