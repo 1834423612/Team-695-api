@@ -47,26 +47,33 @@ if (process.env.NODE_ENV === "production") {
     app.use(helmet({
         contentSecurityPolicy: {
             directives: {
-                defaultSrc: ["'self'"],
+                defaultSrc: ["'self'", "'unsafe-inline'", "https:"],
                 styleSrc: [
                     "'self'", 
                     "'unsafe-inline'", 
                     "https://fonts.googleapis.com",
-                    "https://cdn.tailwindcss.com"
+                    "https://cdn.tailwindcss.com",
+                    "https://cdn.jsdelivr.net",
+                    "https://unpkg.com"
                 ],
                 scriptSrc: [
                     "'self'", 
                     "'unsafe-inline'", 
                     "https://cdn.tailwindcss.com",
-                    "https://code.iconify.design"
+                    "https://code.iconify.design",
+                    "https://cdn.jsdelivr.net",
+                    "https://unpkg.com"
                 ],
                 fontSrc: [
                     "'self'", 
+                    "'unsafe-inline'",
+                    "https:",
                     "https://fonts.gstatic.com",
                     "https://fonts.googleapis.com"
                 ],
                 connectSrc: [
                     "'self'",
+                    "https:",
                     "https://api.iconify.design"
                 ],
                 imgSrc: [
