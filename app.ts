@@ -66,7 +66,7 @@ if (process.env.NODE_ENV === "production") {
                 styleSrc: [
                     "'self'",
                     // Allow styles with nonce
-                    (req: any, res: any) => `'nonce-${res.locals.nonce}'`,
+                    (req: Request, res: Response) => `'nonce-${res.locals.nonce}'`,
                     "https://fonts.googleapis.com",
                     "https://cdn.tailwindcss.com",
                     "https://cdn.jsdelivr.net",
