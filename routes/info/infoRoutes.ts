@@ -9,7 +9,7 @@ const router = express.Router()
 router.get('/api-info', (req, res) => {
     try {
         const swaggerDoc = getSwaggerDoc()
-        const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'))
+        // Use cached packageJson
         
         const apiInfo = {
             name: swaggerDoc.info?.title || packageJson.name || 'Team 695 API',
