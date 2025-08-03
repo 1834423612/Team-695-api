@@ -3,138 +3,860 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team 695 API</title>
+    <title>Team-695 FRC Robot API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    fontFamily: {
+                        'mono': ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .tech-pattern {
+            background-image: 
+                radial-gradient(circle at 25px 25px, rgba(59, 130, 246, 0.02) 2px, transparent 2px),
+                radial-gradient(circle at 75px 75px, rgba(59, 130, 246, 0.02) 2px, transparent 2px);
+            background-size: 100px 100px;
         }
-        .container {
-            text-align: center;
-            max-width: 800px;
-            padding: 40px 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-        }
-        .logo {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 30px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            font-weight: 300;
-        }
-        .subtitle {
-            font-size: 1.2em;
-            margin-bottom: 40px;
-            opacity: 0.9;
-        }
-        .links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 40px;
-        }
-        .link-card {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 20px 30px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
-            min-width: 150px;
         }
-        .link-card:hover {
-            background: rgba(255, 255, 255, 0.3);
+        
+        .card:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.error {
+            background: #ef4444;
+        }
+        
+        .status-indicator.warning {
+            background: #f59e0b;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .code-block {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+        
+        .server-option {
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        
+        .server-option:hover {
+            background: rgba(248, 250, 252, 0.9);
+            border-color: #3b82f6;
+        }
+        
+        .server-option.selected {
+            background: rgba(239, 246, 255, 0.9);
+            border-color: #3b82f6;
+        }
+        
+        .refresh-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-state {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px dashed #f87171;
+        }
+        
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .contact-card {
+            background: linear-gradient(135deg, rgba(240, 249, 255, 0.8) 0%, rgba(224, 242, 254, 0.8) 100%);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }
+        
+        .contact-item {
+            transition: all 0.3s ease;
+        }
+        
+        .contact-item:hover {
+            background-color: rgba(14, 165, 233, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin: -8px;
+        }
+        
+        .pagination-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .uptime-tooltip {
+            position: relative;
+        }
+        
+        .uptime-tooltip:hover .tooltip-content {
+            opacity: 1;
+            visibility: visible;
             transform: translateY(-5px);
         }
-        .link-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 1.1em;
+        
+        .tooltip-content {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            background: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 10;
         }
-        .link-card p {
-            margin: 0;
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-        .status {
-            margin-top: 30px;
-            padding: 15px;
-            background: rgba(0, 255, 0, 0.2);
-            border-radius: 8px;
-            border-left: 4px solid #00ff00;
-        }
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-            .links {
-                flex-direction: column;
-                align-items: center;
-            }
-            .link-card {
-                width: 100%;
-                max-width: 300px;
-            }
+        
+        .tooltip-content::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #1f2937;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="logo">695</div>
-        <h1>Team 695 API</h1>
-        <p class="subtitle">Bison Robotics Official API Server</p>
-        
-        <div class="status">
-            <strong>🟢 API Status: Online</strong>
-        </div>
-        
-        <div class="links">
-            <a href="/api-docs" class="link-card">
-                <h3>📚 API Documentation</h3>
-                <p>Interactive Swagger documentation for all endpoints</p>
-            </a>
+<body class="font-sans bg-gray-50 tech-pattern min-h-screen">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4">
+        <div class="max-w-5xl w-full">
+            <!-- Main Content -->
+            <div class="text-center mb-12 fade-in">
+                <!-- Logo/Icon -->
+                <div class="w-20 h-20 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <iconify-icon icon="mdi:robot" class="text-white text-3xl"></iconify-icon>
+                </div>
+                
+                <!-- Title -->
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                    Team 695 API
+                </h1>
+                
+                <!-- Status -->
+                <div class="flex items-center justify-center gap-3 mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="status-indicator"></div>
+                        <span id="status-text" class="text-green-600 font-medium">Loading...</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 uptime-tooltip">
+                        <span id="uptime-text" class="text-gray-500 text-sm bg-gray-100 px-3 py-1 rounded-full">Loading...</span>
+                        <button id="refresh-status" class="p-1.5 text-gray-400 hover:text-primary-600 transition-colors rounded-full hover:bg-gray-100" title="Refresh status">
+                            <iconify-icon icon="mdi:refresh" class="text-lg"></iconify-icon>
+                        </button>
+                        <div class="tooltip-content">
+                            Process uptime - resets on restart, not server time
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <p class="text-lg text-gray-600 mb-8 max-w-3xl mx-auto">
+                    Team 695 API Documentation for multiple services including authentication, events, surveys, teams, uploads, and feedback
+                </p>
+            </div>
             
-            <a href="https://www.frc695.com" class="link-card" target="_blank">
-                <h3>🌐 Team Website</h3>
-                <p>Visit our official team website</p>
-            </a>
+            <!-- API Servers Selection -->
+            <div class="card rounded-xl p-6 shadow-sm mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                        <iconify-icon icon="mdi:server" class="text-primary-600 text-lg"></iconify-icon>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">API Servers</h3>
+                </div>
+                
+                <div id="servers-container" class="grid md:grid-cols-2 gap-3">
+                    <!-- Servers will be populated by JavaScript -->
+                </div>
+            </div>
             
-            <a href="/api/auth/me" class="link-card">
-                <h3>🔐 Auth Status</h3>
-                <p>Check your authentication status</p>
-            </a>
+            <!-- API Info Grid -->
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- API Information -->
+                <div class="card rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:information" class="text-primary-600 text-lg"></iconify-icon>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">API Information</h3>
+                    </div>
+                    <div id="api-info-content" class="space-y-3 text-sm">
+                        <!-- Content will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div id="contact-card" class="card rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:contact-mail" class="text-green-600 text-lg"></iconify-icon>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Contact & Support</h3>
+                    </div>
+                    <div id="contact-info" class="space-y-3">
+                        <!-- Contact info will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
             
-            <a href="/api/event/event-id" class="link-card">
-                <h3>📅 Current Event</h3>
-                <p>Get the current event information</p>
-            </a>
-        </div>
-        
-        <div style="margin-top: 40px; opacity: 0.7; font-size: 0.9em;">
-            <p>Team 695 Bison Robotics | FIRST Robotics Competition</p>
-            <p>API Version 1.2.6</p>
+            <!-- Quick Start -->
+            <div class="card rounded-xl p-6 shadow-sm mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <iconify-icon icon="mdi:rocket-launch" class="text-green-600 text-lg"></iconify-icon>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Quick Start</h3>
+                </div>
+                <div class="code-block">
+                    <code class="text-green-400 font-mono text-sm">
+                        <span class="text-blue-400">curl</span> <span class="text-yellow-300">-H</span> <span class="text-red-300">"Authorization: Bearer YOUR_TOKEN"</span><br>
+                        <span id="quick-start-url" class="text-white">Loading...</span>
+                    </code>
+                </div>
+            </div>
+            
+            <!-- Available Endpoints -->
+            <div class="card rounded-xl p-6 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:api" class="text-blue-600 text-lg"></iconify-icon>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Available Endpoints</h3>
+                    </div>
+                    
+                    <!-- Tag Filter -->
+                    <div class="flex items-center gap-2">
+                        <label for="tag-filter" class="text-sm text-gray-600">Filter:</label>
+                        <select id="tag-filter" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                            <option value="">All endpoints</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="endpoints-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <!-- Endpoints will be populated by JavaScript -->
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div class="flex items-center gap-4">
+                        <button id="prev-page" class="pagination-btn flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-primary-600 hover:text-white transition-colors" disabled>
+                            <iconify-icon icon="mdi:chevron-left"></iconify-icon>
+                            Previous
+                        </button>
+                        <span id="page-info" class="text-sm text-gray-600">Page 1 of 1</span>
+                        <button id="next-page" class="pagination-btn flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-primary-600 hover:text-white transition-colors" disabled>
+                            Next
+                            <iconify-icon icon="mdi:chevron-right"></iconify-icon>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-gray-600">
+                            Showing <span id="shown-endpoints">0</span> of <span id="total-endpoints-count">0</span> endpoints
+                        </span>
+                        <a href="/api-docs" target="_blank" class="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium text-sm bg-primary-50 px-3 py-2 rounded-lg hover:bg-primary-100 transition-colors">
+                            <iconify-icon icon="mdi:book-open-page-variant"></iconify-icon>
+                            View Full Documentation
+                            <iconify-icon icon="mdi:open-in-new" class="text-xs"></iconify-icon>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <a href="/api-docs" target="_blank" class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all card shadow-lg text-center inline-flex items-center justify-center gap-2">
+                    <iconify-icon icon="mdi:book-open-page-variant"></iconify-icon>
+                    View Documentation
+                </a>
+                <a href="/auth/api-keys" class="border-2 border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all card text-center inline-flex items-center justify-center gap-2">
+                    <iconify-icon icon="mdi:key"></iconify-icon>
+                    Get API Key
+                </a>
+            </div>
+            
+            <!-- Simple Footer Info -->
+            <div class="text-center pt-8 border-t border-gray-200">
+                <p class="text-gray-500 text-sm">
+                    Team 695 Bison Robotics API • 
+                    <a href="/info/status" class="text-primary-600 hover:text-primary-700">Status</a> • 
+                    <a href="/feedback" class="text-primary-600 hover:text-primary-700">Feedback</a>
+                </p>
+            </div>
         </div>
     </div>
+
+    <script>
+        let apiData = {};
+        let statusData = {};
+        let endpointsData = {};
+        let selectedServer = '';
+        let currentEndpointsPage = 1;
+        let endpointsPerPage = 9;
+        let filteredEndpoints = [];
+        let statusUpdateInterval;
+        let dataLoadFailed = false;
+        
+        // Load API data
+        async function loadAPIData() {
+            try {
+                showLoadingState();
+                dataLoadFailed = false;
+                
+                // Load API info
+                const apiInfoResponse = await fetch('/info/api-info');
+                const apiInfoResult = await apiInfoResponse.json();
+                apiData = apiInfoResult.data;
+                
+                // Load status
+                await updateStatus();
+                
+                // Load endpoints
+                const endpointsResponse = await fetch('/info/endpoints');
+                const endpointsResult = await endpointsResponse.json();
+                endpointsData = endpointsResult.data;
+                
+                updateUI();
+                startStatusUpdates();
+            } catch (error) {
+                console.error('Error loading API data:', error);
+                dataLoadFailed = true;
+                showErrorState();
+                showStatusError();
+            }
+        }
+        
+        async function updateStatus() {
+            try {
+                const statusResponse = await fetch('/info/status');
+                const statusResult = await statusResponse.json();
+                statusData = statusResult.data;
+                updateStatusUI();
+            } catch (error) {
+                console.error('Error updating status:', error);
+                if (!dataLoadFailed) {
+                    showStatusError();
+                }
+            }
+        }
+        
+        function startStatusUpdates() {
+            // Update status every 30 seconds
+            statusUpdateInterval = setInterval(updateStatus, 30000);
+        }
+        
+        function showLoadingState() {
+            // Show loading skeletons
+            document.getElementById('api-info-content').innerHTML = `
+                <div class="loading-skeleton h-4 rounded mb-2"></div>
+                <div class="loading-skeleton h-4 rounded mb-2"></div>
+                <div class="loading-skeleton h-4 rounded mb-2"></div>
+                <div class="loading-skeleton h-4 rounded"></div>
+            `;
+            
+            document.getElementById('contact-info').innerHTML = `
+                <div class="loading-skeleton h-4 rounded mb-2"></div>
+                <div class="loading-skeleton h-4 rounded mb-2"></div>
+                <div class="loading-skeleton h-4 rounded"></div>
+            `;
+            
+            document.getElementById('servers-container').innerHTML = `
+                <div class="loading-skeleton h-16 rounded"></div>
+                <div class="loading-skeleton h-16 rounded"></div>
+            `;
+        }
+        
+        function showErrorState() {
+            document.getElementById('api-info-content').innerHTML = `
+                <div class="error-state p-4 rounded-lg text-center">
+                    <iconify-icon icon="mdi:alert-circle" class="text-red-500 text-2xl mb-2"></iconify-icon>
+                    <p class="text-red-600 font-medium">Failed to load API information</p>
+                    <button onclick="loadAPIData()" class="mt-2 text-sm text-red-500 hover:text-red-700">
+                        <iconify-icon icon="mdi:refresh" class="inline mr-1"></iconify-icon>
+                        Retry
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('contact-info').innerHTML = `
+                <div class="error-state p-4 rounded-lg text-center">
+                    <iconify-icon icon="mdi:alert-circle" class="text-red-500 text-xl mb-2"></iconify-icon>
+                    <p class="text-red-600 text-sm">Failed to load contact information</p>
+                </div>
+            `;
+            
+            document.getElementById('servers-container').innerHTML = `
+                <div class="error-state p-4 rounded-lg text-center col-span-2">
+                    <iconify-icon icon="mdi:server-off" class="text-red-500 text-xl mb-2"></iconify-icon>
+                    <p class="text-red-600 text-sm">Failed to load server information</p>
+                </div>
+            `;
+            
+            document.getElementById('endpoints-grid').innerHTML = `
+                <div class="col-span-full error-state p-8 rounded-lg text-center">
+                    <iconify-icon icon="mdi:api-off" class="text-red-500 text-3xl mb-3"></iconify-icon>
+                    <p class="text-red-600 font-medium">Failed to load endpoints</p>
+                    <p class="text-red-500 text-sm">Unable to fetch API endpoint information</p>
+                </div>
+            `;
+        }
+        
+        function showStatusError() {
+            const statusText = document.getElementById('status-text');
+            const uptimeText = document.getElementById('uptime-text');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            statusText.textContent = 'Status Unavailable';
+            statusText.className = 'text-red-600 font-medium';
+            uptimeText.textContent = 'Unable to fetch status';
+            uptimeText.className = 'text-red-500 text-sm bg-red-100 px-3 py-1 rounded-full';
+            statusIndicator.classList.add('error');
+        }
+        
+        function updateUI() {
+            updateStatusUI();
+            updateAPIInfo();
+            updateServers();
+            updateContactInfo();
+            updateEndpoints();
+            updateQuickStartURL();
+        }
+        
+        function updateStatusUI() {
+            const statusText = document.getElementById('status-text');
+            const uptimeText = document.getElementById('uptime-text');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            statusIndicator.classList.remove('error', 'warning');
+            
+            if (statusData.status === 'operational') {
+                statusText.textContent = 'API Operational';
+                statusText.className = 'text-green-600 font-medium';
+                statusIndicator.style.background = '#10b981';
+            } else {
+                statusText.textContent = 'API Issues';
+                statusText.className = 'text-red-600 font-medium';
+                statusIndicator.classList.add('error');
+            }
+            
+            if (statusData.uptime) {
+                uptimeText.textContent = `Uptime: ${statusData.uptime.formatted}`;
+                uptimeText.className = 'text-gray-500 text-sm bg-gray-100 px-3 py-1 rounded-full';
+            }
+        }
+        
+        function updateAPIInfo() {
+            const container = document.getElementById('api-info-content');
+            
+            container.innerHTML = `
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Version:</span>
+                    <span class="font-medium">${apiData.version || 'N/A'}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Total Endpoints:</span>
+                    <span class="font-medium">${apiData.statistics?.totalEndpoints || endpointsData.total || 'N/A'}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Authentication:</span>
+                    <span class="font-medium">Bearer Token, API Key</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Environment:</span>
+                    <span class="font-medium">${statusData.environment || apiData.runtime?.environment || 'N/A'}</span>
+                </div>
+            `;
+        }
+        
+        function updateServers() {
+            const container = document.getElementById('servers-container');
+            const servers = apiData.servers || [];
+            
+            // Add current domain if not in servers list
+            const currentDomain = window.location.origin;
+            const hasCurrentDomain = servers.some(server => server.url === currentDomain);
+            
+            if (!hasCurrentDomain) {
+                servers.unshift({
+                    url: currentDomain,
+                    description: 'Current server'
+                });
+            }
+            
+            container.innerHTML = servers.map((server, index) => `
+                <div class="server-option rounded-lg p-3 cursor-pointer ${index === 0 ? 'selected' : ''}" 
+                     onclick="selectServer('${server.url}', this)">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-gray-900 truncate">${server.url}</div>
+                            <div class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                                server.description === 'Current server' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : server.description.includes('Production') 
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-gray-100 text-gray-800'
+                            }">
+                                <iconify-icon icon="${
+                                    server.description === 'Current server' 
+                                        ? 'mdi:check-circle' 
+                                        : server.description.includes('Production') 
+                                            ? 'mdi:cloud' 
+                                            : 'mdi:laptop'
+                                }" class="mr-1"></iconify-icon>
+                                ${server.description}
+                            </div>
+                        </div>
+                        <button onclick="copyToClipboard('${server.url}', event)" 
+                                class="ml-2 p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-md hover:bg-gray-100">
+                            <iconify-icon icon="mdi:content-copy" class="text-sm"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Set default selected server
+            if (servers.length > 0) {
+                selectedServer = servers[0].url;
+            }
+        }
+        
+        function selectServer(url, element) {
+            selectedServer = url;
+            
+            // Update UI
+            document.querySelectorAll('.server-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            
+            // Update quick start URL
+            updateQuickStartURL();
+        }
+        
+        function updateQuickStartURL() {
+            const quickStartUrl = document.getElementById('quick-start-url');
+            const baseUrl = selectedServer || (apiData.servers && apiData.servers[0]?.url) || window.location.origin;
+            quickStartUrl.textContent = `${baseUrl}/info/status`;
+        }
+        
+        function updateContactInfo() {
+            const container = document.getElementById('contact-info');
+            const contactCard = document.getElementById('contact-card');
+            const contact = apiData.contact || {};
+            
+            let contactHTML = '';
+            let hasContact = false;
+            
+            if (contact.name) {
+                hasContact = true;
+                contactHTML += `
+                    <div class="contact-item flex items-center gap-3 p-2 rounded-lg">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:account" class="text-blue-600"></iconify-icon>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">${contact.name}</div>
+                            <div class="text-sm text-gray-600">Team Contact</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (contact.website) {
+                hasContact = true;
+                contactHTML += `
+                    <div class="contact-item flex items-center gap-3 p-2 rounded-lg">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:web" class="text-green-600"></iconify-icon>
+                        </div>
+                        <div>
+                            <a href="${contact.website}" target="_blank" class="font-medium text-primary-600 hover:text-primary-700">${contact.website}</a>
+                            <div class="text-sm text-gray-600">Official Website</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (contact.email) {
+                hasContact = true;
+                contactHTML += `
+                    <div class="contact-item flex items-center gap-3 p-2 rounded-lg">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <iconify-icon icon="mdi:email" class="text-purple-600"></iconify-icon>
+                        </div>
+                        <div>
+                            <a href="mailto:${contact.email}" class="font-medium text-primary-600 hover:text-primary-700">${contact.email}</a>
+                            <div class="text-sm text-gray-600">Email Support</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (hasContact) {
+                contactCard.className = 'contact-card rounded-xl p-6 shadow-sm';
+                container.innerHTML = contactHTML;
+            } else {
+                contactCard.className = 'card rounded-xl p-6 shadow-sm';
+                container.innerHTML = `
+                    <div class="error-state p-4 rounded-lg text-center">
+                        <iconify-icon icon="mdi:account-question" class="text-gray-400 text-2xl mb-2"></iconify-icon>
+                        <p class="text-gray-500 text-sm">No contact information available</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function updateEndpoints() {
+            const tagFilter = document.getElementById('tag-filter');
+            const endpoints = endpointsData.endpoints || [];
+            const tags = endpointsData.tags || [];
+            
+            // Populate tag filter
+            tagFilter.innerHTML = '<option value="">All endpoints</option>' + 
+                tags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
+            
+            // Initialize filtered endpoints
+            filteredEndpoints = endpoints;
+            currentEndpointsPage = 1;
+            
+            displayEndpoints();
+            setupPagination();
+            
+            // Add tag filter event listener
+            tagFilter.addEventListener('change', function() {
+                const selectedTag = this.value;
+                
+                if (selectedTag) {
+                    filteredEndpoints = endpoints.filter(endpoint => 
+                        endpoint.tags && endpoint.tags.includes(selectedTag)
+                    );
+                } else {
+                    filteredEndpoints = endpoints;
+                }
+                
+                currentEndpointsPage = 1;
+                displayEndpoints();
+                updatePaginationControls();
+            });
+        }
+        
+        function setupPagination() {
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentEndpointsPage > 1) {
+                    currentEndpointsPage--;
+                    displayEndpoints();
+                    updatePaginationControls();
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', function() {
+                const totalPages = Math.ceil(filteredEndpoints.length / endpointsPerPage);
+                if (currentEndpointsPage < totalPages) {
+                    currentEndpointsPage++;
+                    displayEndpoints();
+                    updatePaginationControls();
+                }
+            });
+            
+            updatePaginationControls();
+        }
+        
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(filteredEndpoints.length / endpointsPerPage);
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            
+            prevBtn.disabled = currentEndpointsPage <= 1;
+            nextBtn.disabled = currentEndpointsPage >= totalPages;
+            pageInfo.textContent = `Page ${currentEndpointsPage} of ${totalPages}`;
+        }
+        
+        function displayEndpoints() {
+            const container = document.getElementById('endpoints-grid');
+            
+            const startIndex = (currentEndpointsPage - 1) * endpointsPerPage;
+            const endIndex = startIndex + endpointsPerPage;
+            const endpointsToShow = filteredEndpoints.slice(startIndex, endIndex);
+            
+            if (endpointsToShow.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full error-state p-8 rounded-lg text-center">
+                        <iconify-icon icon="mdi:api-off" class="text-gray-400 text-3xl mb-3"></iconify-icon>
+                        <p class="text-gray-500 font-medium">No endpoints found</p>
+                        <p class="text-gray-400 text-sm">Try adjusting your filter or check back later</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = endpointsToShow.map(endpoint => {
+                const methodColor = getMethodColor(endpoint.method);
+                return `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors bg-white">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-${methodColor}-100 text-${methodColor}-800 text-xs px-2 py-1 rounded font-mono">${endpoint.method}</span>
+                            <code class="text-sm font-mono text-gray-700 truncate flex-1">${endpoint.path}</code>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2 line-clamp-2">${endpoint.summary || 'No description'}</p>
+                        ${endpoint.tags ? `<div class="flex flex-wrap gap-1">
+                            ${endpoint.tags.slice(0, 2).map(tag => 
+                                `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${tag}</span>`
+                            ).join('')}
+                            ${endpoint.tags.length > 2 ? `<span class="text-xs text-gray-400">+${endpoint.tags.length - 2}</span>` : ''}
+                        </div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Update counters
+            document.getElementById('shown-endpoints').textContent = endpointsToShow.length;
+            document.getElementById('total-endpoints-count').textContent = filteredEndpoints.length;
+        }
+        
+        function getMethodColor(method) {
+            const colors = {
+                'GET': 'green',
+                'POST': 'blue',
+                'PUT': 'yellow',
+                'DELETE': 'red',
+                'PATCH': 'purple'
+            };
+            return colors[method] || 'gray';
+        }
+        
+        function copyToClipboard(text, event) {
+            event.stopPropagation();
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show success animation
+                const button = event.target.closest('button');
+                const icon = button.querySelector('iconify-icon');
+                
+                icon.setAttribute('icon', 'mdi:check');
+                button.classList.add('text-green-600');
+                
+                setTimeout(() => {
+                    icon.setAttribute('icon', 'mdi:content-copy');
+                    button.classList.remove('text-green-600');
+                }, 2000);
+            });
+        }
+        
+        // Manual refresh status
+        document.getElementById('refresh-status').addEventListener('click', async function() {
+            const icon = this.querySelector('iconify-icon');
+            icon.classList.add('refresh-spin');
+            
+            await updateStatus();
+            
+            setTimeout(() => {
+                icon.classList.remove('refresh-spin');
+            }, 1000);
+        });
+        
+        // Add fade-in animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAPIData();
+            
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (statusUpdateInterval) {
+                clearInterval(statusUpdateInterval);
+            }
+        });
+    </script>
 </body>
 </html>
