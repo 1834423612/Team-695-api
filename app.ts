@@ -1,3 +1,4 @@
+import path from "path"
 import express from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
@@ -7,6 +8,8 @@ import fs from "fs"
 import yaml from "yaml"
 import helmet from "helmet"
 import morgan from "morgan"
+import os from 'os'
+import { performHealthCheck } from "./utils/healthCheck"
 
 // 添加类型声明扩展，使rawBody在Request对象上可用
 declare global {
@@ -29,6 +32,7 @@ import webhookRoutes from "./routes/webhookRoutes"
 import assignmentRoutes from "./routes/assignmentRoutes"
 import { publicTeamMatchesRoutes, protectedTeamMatchesRoutes } from './routes/teamMatchesRoutes';
 import { verifyToken } from "./middlewares/auth"
+import apiInfoRoutes from "./routes/apiInfoRoutes"
 
 // Load Swagger configuration
 const swaggerFile = fs.readFileSync("./swagger/Docs.yaml", "utf8")
@@ -39,7 +43,65 @@ dotenv.config()
 const app = express()
 
 // Security middleware
-app.use(helmet())
+if (process.env.NODE_ENV === "production") {
+    // Nonce generator middleware
+    app.use((req, res, next) => {
+        // Generate a random nonce for each request
+        res.locals.nonce = Buffer.from(
+            Math.random().toString() + Date.now().toString()
+        ).toString('base64');
+        next();
+    });
+    app.use(helmet({
+        contentSecurityPolicy: {
+            useDefaults: false,
+            directives: {
+                defaultSrc: ["'self'", "https:"],
+                styleSrc: [
+                    "'self'",
+                    // Allow styles with nonce
+                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    "https://fonts.googleapis.com",
+                    "https://cdn.tailwindcss.com",
+                    "https://cdn.jsdelivr.net",
+                    "https://unpkg.com"
+                ],
+                scriptSrc: [
+                    "'self'",
+                    // Allow scripts with nonce
+                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    "https://cdn.tailwindcss.com",
+                    "https://code.iconify.design",
+                    "https://cdn.jsdelivr.net",
+                    "https://unpkg.com"
+                ],
+                fontSrc: [
+                    "'self'",
+                    "https:",
+                    "https://fonts.gstatic.com",
+                    "https://fonts.googleapis.com"
+                ],
+                connectSrc: [
+                    "'self'",
+                    "https:",
+                    "https://api.iconify.design"
+                ],
+                imgSrc: [
+                    "'self'", 
+                    "data:", 
+                    "https:"
+                ],
+                objectSrc: ["'none'"]
+            },
+        }
+    }))
+} else {
+    // Disable Content Security Policy (CSP) in development for easier debugging
+    app.use(helmet({
+        contentSecurityPolicy: false
+    }))
+}
+
 
 // Logging middleware
 app.use(morgan("combined"))
@@ -111,15 +173,47 @@ apiRouter.use("/assignments/:id", (req, res, next) => {
     }
 });
 
-// 反馈路由有自己的保护机制
+// Feedback routes
 apiRouter.use("/", feedbackRoutes)
+
+// API Info routes
+apiRouter.use("/info", apiInfoRoutes)
 
 // Use the apiRouter for all API routes
 app.use("/", apiRouter) // Allow routes with `/` prefix
 app.use("/api", apiRouter) // Allow routes with `/api` prefix
 
-// 添加 API v1 前缀路由 - 使用相同的路由处理器但有不同的前缀
+// API v1 routes - for backward compatibility
 app.use("/api/v1", apiRouter)
+
+
+// ------------- Index Page and Static Files ------------- //
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')))
+
+// Route for the index page
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'))
+})
+
+// Enhanced Health check endpoint
+app.get("/health", async (req, res) => {
+    try {
+        const healthData = await performHealthCheck()
+        
+        if (!healthData.success) {
+            res.status(503)
+        }
+        
+        res.json(healthData)
+        
+    } catch (error) {
+        console.error('Health check error:', error)
+        res.status(503).json(error)
+    }
+})
+
+
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
