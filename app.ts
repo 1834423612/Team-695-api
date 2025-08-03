@@ -44,29 +44,39 @@ const app = express()
 
 // Security middleware
 if (process.env.NODE_ENV === "production") {
+    // Nonce generator middleware
+    app.use((req, res, next) => {
+        // Generate a random nonce for each request
+        res.locals.nonce = Buffer.from(
+            Math.random().toString() + Date.now().toString()
+        ).toString('base64');
+        next();
+    });
     app.use(helmet({
         contentSecurityPolicy: {
+            useDefaults: false,
             directives: {
-                defaultSrc: ["'self'", "'unsafe-inline'", "https:"],
+                defaultSrc: ["'self'", "https:"],
                 styleSrc: [
-                    "'self'", 
-                    "'unsafe-inline'", 
+                    "'self'",
+                    // Allow styles with nonce
+                    (req, res) => `'nonce-${res.locals.nonce}'`,
                     "https://fonts.googleapis.com",
                     "https://cdn.tailwindcss.com",
                     "https://cdn.jsdelivr.net",
                     "https://unpkg.com"
                 ],
                 scriptSrc: [
-                    "'self'", 
-                    "'unsafe-inline'", 
+                    "'self'",
+                    // Allow scripts with nonce
+                    (req, res) => `'nonce-${res.locals.nonce}'`,
                     "https://cdn.tailwindcss.com",
                     "https://code.iconify.design",
                     "https://cdn.jsdelivr.net",
                     "https://unpkg.com"
                 ],
                 fontSrc: [
-                    "'self'", 
-                    "'unsafe-inline'",
+                    "'self'",
                     "https:",
                     "https://fonts.gstatic.com",
                     "https://fonts.googleapis.com"
