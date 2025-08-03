@@ -3,6 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import { performance } from 'perf_hooks'
 
+const pkg = require('../package.json');
+
 export interface HealthCheckResult {
     success: boolean
     status: string

@@ -18,6 +18,12 @@ declare global {
             rawBody?: string;
             rawBodyBuffer?: Buffer;
         }
+        interface Response {
+            locals: {
+                nonce?: string;
+                [key: string]: any;
+            };
+        }
     }
 }
 
@@ -59,8 +65,7 @@ if (process.env.NODE_ENV === "production") {
                 defaultSrc: ["'self'", "https:"],
                 styleSrc: [
                     "'self'",
-                    // Allow styles with nonce
-                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    "'nonce-{nonce}'",
                     "https://fonts.googleapis.com",
                     "https://cdn.tailwindcss.com",
                     "https://cdn.jsdelivr.net",
@@ -68,8 +73,7 @@ if (process.env.NODE_ENV === "production") {
                 ],
                 scriptSrc: [
                     "'self'",
-                    // Allow scripts with nonce
-                    (req, res) => `'nonce-${res.locals.nonce}'`,
+                    "'nonce-{nonce}'",
                     "https://cdn.tailwindcss.com",
                     "https://code.iconify.design",
                     "https://cdn.jsdelivr.net",
@@ -87,8 +91,8 @@ if (process.env.NODE_ENV === "production") {
                     "https://api.iconify.design"
                 ],
                 imgSrc: [
-                    "'self'", 
-                    "data:", 
+                    "'self'",
+                    "data:",
                     "https:"
                 ],
                 objectSrc: ["'none'"]
@@ -200,13 +204,13 @@ app.get("/", (req, res) => {
 app.get("/health", async (req, res) => {
     try {
         const healthData = await performHealthCheck()
-        
+
         if (!healthData.success) {
             res.status(503)
         }
-        
+
         res.json(healthData)
-        
+
     } catch (error) {
         console.error('Health check error:', error)
         res.status(503).json(error)

@@ -3,6 +3,9 @@ import fs from 'fs'
 import path from 'path'
 import { formatUptime } from '../../utils/healthCheck'
 
+// Use cached packageJson
+const packageJson = require('../../package.json');
+
 const router = express.Router()
 
 // Get the status of the API
