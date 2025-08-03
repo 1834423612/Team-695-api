@@ -16,7 +16,7 @@ router.get('/', (req, res) => {
                 seconds: process.uptime(),
                 formatted: formatUptime(process.uptime())
             },
-            version: JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')).version,
+            version: packageJson.version,
             environment: process.env.NODE_ENV || 'development',
             endpoints: {
                 health: '/health',
