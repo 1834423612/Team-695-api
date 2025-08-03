@@ -75,7 +75,7 @@ if (process.env.NODE_ENV === "production") {
                 scriptSrc: [
                     "'self'",
                     // Allow scripts with nonce
-                    (req: any, res: any) => `'nonce-${res.locals.nonce}'`,
+                    (req: Request, res: Response) => `'nonce-${res.locals.nonce}'`,
                     "https://cdn.tailwindcss.com",
                     "https://code.iconify.design",
                     "https://cdn.jsdelivr.net",
