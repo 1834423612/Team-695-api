@@ -27,6 +27,8 @@ tags:
     description: APIs related to task assignments
   - name: TeamMatches
     description: APIs related to team matches and pit-scouting status
+  - name: Info
+    description: APIs for retrieving API information and status
 components:
   securitySchemes:
     bearerAuth:
@@ -452,6 +454,199 @@ components:
         displayName:
           type: string
           description: User display name
+    EndpointInfo:
+      type: object
+      properties:
+        path:
+          type: string
+          description: API endpoint path
+        method:
+          type: string
+          description: HTTP method
+        summary:
+          type: string
+          description: Brief description of the endpoint
+        description:
+          type: string
+          description: Detailed description of the endpoint
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the endpoint
+        security:
+          type: array
+          items:
+            type: string
+          description: Security requirements for the endpoint
+        parameters:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              in:
+                type: string
+              required:
+                type: boolean
+              description:
+                type: string
+        requestBody:
+          type: object
+          properties:
+            required:
+              type: boolean
+            contentTypes:
+              type: array
+              items:
+                type: string
+        responses:
+          type: array
+          items:
+            type: string
+            
+    ApiInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: API name
+        description:
+          type: string
+          description: API description
+        version:
+          type: string
+          description: API version
+        author:
+          type: string
+          description: API author
+        license:
+          type: string
+          description: API license
+        servers:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              description:
+                type: string
+        contact:
+          type: object
+          properties:
+            name:
+              type: string
+            website:
+              type: string
+            email:
+              type: string
+        documentation:
+          type: object
+          properties:
+            swagger:
+              type: string
+            endpoints:
+              type: string
+            health:
+              type: string
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+        features:
+          type: object
+          properties:
+            authentication:
+              type: boolean
+            fileUploads:
+              type: boolean
+            webhooks:
+              type: boolean
+            swagger:
+              type: boolean
+            cors:
+              type: boolean
+            rateLimit:
+              type: boolean
+            security:
+              type: boolean
+        statistics:
+          type: object
+          properties:
+            totalEndpoints:
+              type: integer
+            totalTags:
+              type: integer
+            supportedMethods:
+              type: array
+              items:
+                type: string
+            authMethods:
+              type: array
+              items:
+                type: string
+        runtime:
+          type: object
+          properties:
+            nodeVersion:
+              type: string
+            environment:
+              type: string
+            uptime:
+              type: number
+            platform:
+              type: string
+            arch:
+              type: string
+        lastUpdated:
+          type: string
+          format: date-time
+          
+    ServiceStatus:
+      type: object
+      properties:
+        service:
+          type: string
+          description: Service name
+        status:
+          type: string
+          enum: [operational, degraded, down]
+          description: Current service status
+        timestamp:
+          type: string
+          format: date-time
+          description: Status check timestamp
+        uptime:
+          type: object
+          properties:
+            seconds:
+              type: number
+            formatted:
+              type: string
+        version:
+          type: string
+          description: Service version
+        environment:
+          type: string
+          description: Runtime environment
+        endpoints:
+          type: object
+          properties:
+            health:
+              type: string
+            info:
+              type: string
+            documentation:
+              type: string
+            endpoints:
+              type: string
 
 paths:
   /auth/callback:
@@ -1747,6 +1942,100 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+  /info/endpoints:
+    get:
+      summary: Get all available API endpoints
+      description: Retrieve a list of all available API endpoints with their details
+      tags:
+        - Info
+      parameters:
+        - in: query
+          name: tag
+          schema:
+            type: string
+          description: Filter endpoints by tag
+      responses:
+        '200':
+          description: Endpoints retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          endpoints:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/EndpointInfo'
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                          lastUpdated:
+                            type: string
+                            format: date-time
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /info/api-info:
+    get:
+      summary: Get API information
+      description: Retrieve comprehensive information about the API
+      tags:
+        - Info
+      responses:
+        '200':
+          description: API information retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApiInfo'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /info/status:
+    get:
+      summary: Get service status
+      description: Get a quick overview of the service status
+      tags:
+        - Info
+      responses:
+        '200':
+          description: Status retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ServiceStatus'
         '500':
           description: Server error
           content:
