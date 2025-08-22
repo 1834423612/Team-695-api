@@ -48,7 +48,7 @@ class AuthController {
             console.log("getCurrentUser called with headers:", req.headers);
             console.log("API authenticated:", req.apiAuthenticated);
 
-            // 检查是否已由中间件验证过 - JWT或API Key
+            // If already authenticated by middleware (JWT or API Key)
             if (req.user) {
                 console.log("User already authenticated via middleware");
                 return success(res, req.user);
@@ -62,7 +62,7 @@ class AuthController {
             if (authHeader) {
                 // Support tokens with or without Bearer prefix
                 token = authHeader.startsWith("Bearer ")
-                    ? authHeader.slice(7) // Remove "Bearer " prefix
+                    ? authHeader.slice(7)
                     : authHeader;
             }
 
@@ -76,59 +76,55 @@ class AuthController {
                 token = req.token;
             }
 
-            // 如果有token，先检查本地黑名单，再进行远程验证
             if (token) {
-                // 检查本地黑名单
+                // Check local blacklist first
                 const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
                 if (isBlacklisted) {
                     return unauthorized(res, "Token has been revoked");
                 }
 
-                // 先尝试本地解析以获取基础信息
                 try {
                     const decodedToken = authService.parseJwtToken(token);
-                    
-                    // 验证token内容
+
                     if (!decodedToken || !decodedToken.payload) {
                         return unauthorized(res, "Token content is invalid");
                     }
-                    
-                    // 执行远程验证以检查token在Casdoor是否被撤销
+
+                    // Remote validation: only blacklist if Casdoor confirms token is invalid
                     try {
-                        // 使用validate-token端点验证JWT，不会创建新token
+                        // Use /api/user endpoint to validate JWT (GET, not POST)
                         const axiosOptions = {
                             timeout: 3000,
                             headers: {
+                                "Authorization": `Bearer ${token}`,
                                 "Content-Type": "application/json"
                             }
                         };
-                        
-                        // 执行验证
-                        const response = await axios.post(
+
+                        const response = await axios.get(
                             `${casdoorConfig.endpoint}/api/user`,
-                            { token: token },
                             axiosOptions
                         );
-                        
+
                         const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
-                        
+
                         if (!tokenIsActive) {
-                            // token在Casdoor已被撤销，添加到本地黑名单
+                            // Only blacklist if Casdoor confirms token is invalid
                             await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
                             console.log("Token was revoked on Casdoor, adding to local blacklist");
                             return unauthorized(res, "Token has been revoked on authentication server");
                         }
-                        
-                        // 验证通过，返回用户信息
+
+                        // Token is valid, return user info
                         req.user = decodedToken.payload;
                         req.token = token;
                         req.decodedToken = decodedToken;
-                        
+
                         return success(res, decodedToken.payload);
                     } catch (validationError) {
                         console.error("Remote token validation error:", validationError);
-                        
-                        // 如果是服务器错误且设置了降级验证，使用本地验证结果
+
+                        // If fallback is enabled and it's a server error, use local validation
                         if (process.env.TOKEN_VALIDATION_FALLBACK === "true" && axios.isAxiosError(validationError)) {
                             console.log("Using fallback validation due to remote validation error");
                             req.user = decodedToken.payload;
@@ -136,31 +132,30 @@ class AuthController {
                             req.decodedToken = decodedToken;
                             return success(res, decodedToken.payload, "Warning: Using local validation only");
                         }
-                        
+
                         return unauthorized(res, "Token validation failed");
                     }
-                    
+
                 } catch (tokenError) {
                     console.error("Token parsing error:", tokenError);
-                    // 本地解析失败，继续检查API Key
+                    // If local parsing fails, continue to API Key check
                 }
             }
 
-            // 如果没有有效token，尝试API Key
+            // If no valid token, try API Key
             const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
             const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
 
             if (apiKey && apiSecret) {
                 console.log("Found API Key in request, attempting authentication");
                 try {
-                    // 使用 API Key 和 Secret 从 Casdoor 获取用户信息
                     const userData = await authService.getUserInfoWithApiKey(apiKey, apiSecret);
                     return success(res, userData);
                 } catch (apiErr) {
                     console.error("API Key authentication failed:", apiErr);
                 }
             }
-            
+
             return unauthorized(res, "Please provide a valid JWT token or API Key/Secret");
         } catch (err) {
             console.error("Error in getCurrentUser:", err);
