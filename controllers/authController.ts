@@ -78,10 +78,10 @@ class AuthController {
 
             if (token) {
                 // Check local blacklist first
-                const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
-                if (isBlacklisted) {
-                    return unauthorized(res, "Token has been revoked");
-                }
+                // const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+                // if (isBlacklisted) {
+                //     return unauthorized(res, "Token has been revoked");
+                // }
 
                 try {
                     const decodedToken = authService.parseJwtToken(token);
@@ -110,8 +110,8 @@ class AuthController {
 
                         if (!tokenIsActive) {
                             // Only blacklist if Casdoor confirms token is invalid
-                            await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
-                            console.log("Token was revoked on Casdoor, adding to local blacklist");
+                            // await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
+                            // console.log("Token was revoked on Casdoor, adding to local blacklist");
                             return unauthorized(res, "Token has been revoked on authentication server");
                         }
 
@@ -175,10 +175,10 @@ class AuthController {
             }
 
             // Check if token is blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
-            if (isBlacklisted) {
-                return unauthorized(res, "Token has been revoked")
-            }
+            // const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            // if (isBlacklisted) {
+            //     return unauthorized(res, "Token has been revoked")
+            // }
 
             const userInfo = authService.parseJwtToken(token)
             return success(res, userInfo)
@@ -357,10 +357,10 @@ class AuthController {
             }
 
             // Check if token is already blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
-            if (isBlacklisted) {
-                return success(res, { message: "Already logged out" })
-            }
+            // const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            // if (isBlacklisted) {
+            //     return success(res, { message: "Already logged out" })
+            // }
 
             // Revoke the token on Casdoor server and add to blacklist
             const revokeResult = await authService.revokeToken(token)
@@ -398,10 +398,10 @@ class AuthController {
             }
 
             // Check if token is already blacklisted
-            const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
-            if (isBlacklisted) {
-                return success(res, { message: "Token already revoked" })
-            }
+            // const isBlacklisted = await tokenBlacklist.isBlacklisted(token)
+            // if (isBlacklisted) {
+            //     return success(res, { message: "Token already revoked" })
+            // }
 
             // Revoke the specified token
             const revokeResult = await authService.revokeToken(token)
