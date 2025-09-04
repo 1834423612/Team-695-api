@@ -193,136 +193,84 @@ class AuthController {
      */
     async validateToken(req: Request, res: Response) {
         try {
-            // 如果我们通过了 verifyToken 中间件，意味着基本认证有效
-            let isAdmin = false;
-            let tokenIsActive = false;
+            // 本地缓存和isAdmin相关逻辑全部注释掉，仅保留转发到Casdoor服务器的部分
+            // let isAdmin = false;
+            // let tokenIsActive = false;
             
-            // 创建一个简单的缓存键
-            const cacheKey = req.apiAuthenticated 
-                ? `apikey:${req.headers["x-api-key"] || req.query.accessKey}`
-                : `jwt:${req.token?.substring(0, 20)}`;
-                
-            // 检查是否需要绕过缓存（强制验证）
-            const bypassCache = req.query.bypassCache === 'true';
-                
-            // 首先检查缓存 - 从 req 对象获取缓存，如果有的话且未要求绕过缓存
-            const cachedResult = !bypassCache && req.tokenCache?.[cacheKey];
-            if (cachedResult && cachedResult.expiry > Date.now()) {
-                console.log(`Using cached token validation result for ${cacheKey}`);
-                return success(res, {
-                    valid: true,
-                    isAdmin: cachedResult.isAdmin,
-                    tokenStatus: "active",
-                    fromCache: true
-                });
-            }
-            
-            // 检查 API Key 认证
+            // const cacheKey = req.apiAuthenticated 
+            //     ? `apikey:${req.headers["x-api-key"] || req.query.accessKey}`
+            //     : `jwt:${req.token?.substring(0, 20)}`;
+            // const bypassCache = req.query.bypassCache === 'true';
+            // const cachedResult = !bypassCache && req.tokenCache?.[cacheKey];
+            // if (cachedResult && cachedResult.expiry > Date.now()) {
+            //     console.log(`Using cached token validation result for ${cacheKey}`);
+            //     return success(res, {
+            //         valid: true,
+            //         isAdmin: cachedResult.isAdmin,
+            //         tokenStatus: "active",
+            //         fromCache: true
+            //     });
+            // }
+
+            // 只做Casdoor远程校验，不做本地isAdmin判断
             if (req.apiAuthenticated && req.user) {
-                console.log("API Key authentication detected in validateToken");
-                
                 try {
                     const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
                     const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
-                    
-                    if (apiKey && apiSecret) {
-                        // 使用validate-credentials端点验证API Key，而不是生成新token的get-account
-                        const axiosOptions = {
-                            timeout: 3000, // 3秒超时
-                            headers: {
-                                "Content-Type": "application/json"
-                            }
-                        };
-                        
-                        // 执行验证
-                        const response = await axios.post(
-                            `${casdoorConfig.endpoint}/api/validate-credentials`,
-                            { 
-                                type: "api-key", 
-                                key: apiKey, 
-                                secret: apiSecret 
-                            },
-                            axiosOptions
-                        );
-                        
-                        tokenIsActive = response?.status === 200 && response.data?.status === "ok";
-                        console.log(`API Key validation result: ${tokenIsActive ? 'valid' : 'invalid'}`);
-                    }
-                } catch (error) {
-                    console.error("Error validating API key with Casdoor:", error);
-                    // 远程验证失败时，标记为无效
-                    tokenIsActive = false;
-                }
-                
-                // 检查是否为管理员
-                isAdmin = req.user.isAdmin === true || 
-                    (req.user.groups && (
-                        req.user.groups.includes("admin") || 
-                        req.user.groups.includes("Team695/admin")
-                    ));
-            }
-            // 检查 JWT 认证
-            else if (req.user && req.decodedToken && req.token) {
-                console.log("JWT authentication detected in validateToken");
-                
-                try {
-                    // 使用正确的Casdoor端点验证JWT，而不是不存在的validate-token
                     const axiosOptions = {
-                        timeout: 3000, // 3秒超时
+                        timeout: 3000,
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    };
+                    const response = await axios.post(
+                        `${casdoorConfig.endpoint}/api/validate-credentials`,
+                        { 
+                            type: "api-key", 
+                            key: apiKey, 
+                            secret: apiSecret 
+                        },
+                        axiosOptions
+                    );
+                    const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
+                    if (!tokenIsActive) {
+                        return unauthorized(res, "Token/API Key is no longer valid");
+                    }
+                    // return success(res, { valid: true, isAdmin, tokenStatus: "active" });
+                    return success(res, { valid: true, tokenStatus: "active" });
+                } catch (error) {
+                    return unauthorized(res, "Token/API Key is no longer valid");
+                }
+            }
+            else if (req.user && req.decodedToken && req.token) {
+                try {
+                    const axiosOptions = {
+                        timeout: 3000,
                         headers: {
                             "Authorization": `Bearer ${req.token}`,
                             "Content-Type": "application/json"
                         }
                     };
-                    
-                    // 使用/api/user端点验证token
                     const response = await axios.get(
                         `${casdoorConfig.endpoint}/api/user`,
                         axiosOptions
                     );
-                    
-                    // 只要能成功获取数据且状态是ok，就说明token有效
-                    tokenIsActive = response?.status === 200 && response.data?.status === "ok";
-                    console.log(`JWT validation result with Casdoor: ${tokenIsActive ? 'valid' : 'invalid'}`);
-                } catch (error) {
-                    console.error("Error validating JWT with Casdoor:", error);
-                    // 返回401或其他错误，表示token无效
-                    tokenIsActive = false;
-                    
-                    // 记录详细的错误信息
-                    if (axios.isAxiosError(error) && error.response) {
-                        console.log(`Casdoor response: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+                    const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
+                    if (!tokenIsActive) {
+                        return unauthorized(res, "Token/API Key is no longer valid");
                     }
+                    // return success(res, { valid: true, isAdmin, tokenStatus: "active" });
+                    return success(res, { valid: true, tokenStatus: "active" });
+                } catch (error) {
+                    return unauthorized(res, "Token/API Key is no longer valid");
                 }
-                
-                isAdmin = authService.isUserAdmin(req.decodedToken);
             } else {
-                console.log("No authentication detected in validateToken");
                 return unauthorized(res, "Authentication required");
             }
-            
-            if (!tokenIsActive) {
-                return unauthorized(res, "Token/API Key is no longer valid");
-            }
-            
-            // 如果验证成功，在返回结果前将结果保存到缓存
-            const cacheExpiry = Date.now() + (5 * 60 * 1000); // 5分钟有效期
-            if (req.tokenCache) {
-                req.tokenCache[cacheKey] = {
-                    isAdmin,
-                    expiry: cacheExpiry
-                };
-                console.log(`Cached token validation result for ${cacheKey} until ${new Date(cacheExpiry).toISOString()}`);
-            }
-            
-            return success(res, { 
-                valid: true, 
-                isAdmin,
-                tokenStatus: "active"
-            });
+            // ...本地缓存和isAdmin相关逻辑全部注释...
         } catch (err) {
             console.error("Token validation error:", err);
-            return error(res, 500, "Failed to validate token", err);
+            return error(res, 500, "Failed to validate token", err)
         }
     }
 
