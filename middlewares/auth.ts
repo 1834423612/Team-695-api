@@ -59,87 +59,86 @@ export const verifyToken = [
                 return unauthorized(res, "Token has been revoked")
             }
 
+            // 透明代理到 Casdoor 验证 token（优先），成功后使用 Casdoor 返回的数据作为 req.user
             try {
-                // 只进行本地解析验证，确保token是由Casdoor签发的
-                const decodedToken = authService.parseJwtToken(token)
-                
-                // 验证基本的token结构
-                if (!decodedToken || !decodedToken.payload) {
-                    return unauthorized(res, "Invalid token format")
-                }
-                
-                // 验证token是否过期
-                const currentTime = Math.floor(Date.now() / 1000)
-                if (decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
-                    return unauthorized(res, "Token has expired")
-                }
-                
-                // 不再进行远程验证，只依赖本地验证结果
+                const incomingCookies = (req.headers.cookie || "").toString();
+                const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
-                // 远程验证 token 是否被撤销或仍然有效。
-                // 重要：不要因为 Casdoor 返回的非标准 body 而盲目把 token 加入黑名单。
-                // 只有在明确收到 401 时才将 token 加入本地黑名单；其他异常情况根据 TOKEN_VALIDATION_FALLBACK 决定是否降级为仅本地验证。
-                try {
-                    const response = await axios.get(
-                        `${casdoorConfig.endpoint}/api/user`,
-                        {
-                            timeout: 3000,
-                            headers: {
-                                "Authorization": `Bearer ${token}`,
-                                "Content-Type": "application/json"
-                            }
-                        }
-                    );
-
-                    // 如果 CASDOOR 返回 200，优先检查返回体中的 status 字段；
-                    // 若该字段存在且等于 "ok" 则视为通过；
-                    // 若该字段存在但不为 "ok"，不要立即加入黑名单 —— 可能是 Casdoor 的响应格式差异或临时问题。
-                    if (response.status === 200) {
-                        if (response.data && typeof response.data.status !== 'undefined') {
-                            if (response.data.status === 'ok') {
-                                // 远程验证通过
-                            } else {
-                                console.warn('Remote validation returned non-ok status:', response.data);
-                                if (process.env.TOKEN_VALIDATION_FALLBACK !== 'true') {
-                                    return unauthorized(res, 'Token validation failed');
-                                }
-                                // 否则继续使用本地解析的结果（降级模式）
-                                console.log('Proceeding with local token validation due to fallback policy');
-                            }
-                        } else {
-                            // 如果返回体没有 status 字段，但 HTTP 200 成功，认为远程可达且不明确拒绝。
-                            // 在非降级情况下，我们仍然接受 200 响应；如果需要更严格的校验，可打开 TOKEN_VALIDATION_FALLBACK 控制。
-                            console.log('Remote validation returned 200 without explicit status field; accepting remote check');
+                const response = await axios.get(
+                    `${casdoorConfig.endpoint}/api/user`,
+                    {
+                        timeout: 3000,
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "Cookie": cookieHeader
                         }
                     }
-                } catch (validationError) {
-                    console.error('Remote token validation error in middleware:', validationError);
+                );
 
-                    // 只有在 Casdoor 明确返回 401（token 被撤销或无效）时，才将 token 加入本地黑名单并拒绝请求。
-                    if (axios.isAxiosError(validationError) && validationError.response && validationError.response.status === 401) {
-                        await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
-                        console.log('Token was revoked or invalid (401 from Casdoor), adding to local blacklist');
-                        return unauthorized(res, 'Token is invalid or has been revoked');
+                // 如果 Casdoor 明确通过，使用返回的数据构建 req.user
+                if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
+                    const payload = response.data?.data || response.data || {};
+
+                    // Normalize user object safely
+                    const user = {
+                        id: payload.sub || payload.id || payload.userId || payload.account || payload.name || '',
+                        name: payload.name || payload.displayName || payload.username || '',
+                        email: payload.email || payload.data?.email || '',
+                        username: payload.preferred_username || payload.username || payload.name || '',
+                        displayName: payload.data?.displayName || payload.displayName || payload.name || '',
+                        avatar: payload.data?.avatar || payload.avatar || '',
+                        isAdmin: payload.isAdmin === true || payload.data?.isAdmin === true || false,
+                        groups: payload.groups || payload.data?.groups || [],
+                        role: payload.role || payload.data?.role || '',
+                        owner: payload.owner || payload.data?.owner || casdoorConfig.orgName,
+                        raw: payload
+                    } as any;
+
+                    req.user = user;
+                    req.token = token;
+                    req.decodedToken = { payload };
+
+                    return next();
+                }
+            } catch (validationError: any) {
+                // 如果 Casdoor 明确返回 401，加入黑名单并拒绝。
+                if (axios.isAxiosError(validationError) && validationError.response && validationError.response.status === 401) {
+                    try {
+                        // 尝试解析 exp 用于黑名单过期时间
+                        const decoded = authService.parseJwtToken(token)
+                        await tokenBlacklist.addToBlacklist(token, decoded.payload?.exp)
+                        console.log('Token added to blacklist, expires at:', new Date((decoded.payload?.exp || 0) * 1000).toISOString())
+                    } catch (e) {
+                        // ignore parse errors
                     }
-
-                    // 其他类型的远程验证错误（网络问题、非401响应等）
-                    if (process.env.TOKEN_VALIDATION_FALLBACK !== 'true') {
-                        console.log('Remote validation failed and fallback disabled, rejecting token');
-                        return unauthorized(res, 'Token validation failed');
-                    }
-
-                    console.log('Remote validation failed but fallback enabled — continuing with local validation only');
+                    return unauthorized(res, 'Token is invalid or has been revoked')
                 }
 
-                // Attach decoded token and user information to request object
-                req.decodedToken = decodedToken
-                req.user = decodedToken.payload
-                req.token = token
+                // 其他错误（网络、超时等）根据 TOKEN_VALIDATION_FALLBACK 决定是否回退到本地解析
+                console.error('Remote validation error:', validationError)
+                if (process.env.TOKEN_VALIDATION_FALLBACK === 'true') {
+                    try {
+                        const decodedToken = authService.parseJwtToken(token)
+                        const currentTime = Math.floor(Date.now() / 1000)
+                        if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
+                            return unauthorized(res, 'Token has expired')
+                        }
 
-                next()
-            } catch (tokenError) {
-                console.error("Token parsing error:", tokenError)
-                return unauthorized(res, `Invalid token: ${(tokenError as Error).message}`)
+                        req.decodedToken = decodedToken
+                        req.user = decodedToken.payload
+                        req.token = token
+
+                        console.log('Using local token parsing due to remote validation failure')
+                        return next()
+                    } catch (parseErr) {
+                        console.error('Local parse fallback failed:', parseErr)
+                        return unauthorized(res, 'Token validation failed')
+                    }
+                }
+
+                return unauthorized(res, 'Token validation failed')
             }
         } catch (error) {
             console.error("Token verification error:", error)
@@ -236,23 +235,47 @@ export const optionalAuth = [
             // Set token to request object
             req.token = token
 
-            // Parse and verify token
+            // 尝试使用 Casdoor 验证 token（非阻塞），如果失败则回退到本地解析或继续不认证
             try {
-                const decodedToken = authService.parseJwtToken(token)
+                const incomingCookies = (req.headers.cookie || "").toString();
+                const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
-                // Check if token is expired
-                const currentTime = Math.floor(Date.now() / 1000)
-                if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
-                    // Token is expired, but we'll continue without authentication
+                const response = await axios.get(
+                    `${casdoorConfig.endpoint}/api/user`,
+                    {
+                        timeout: 3000,
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "Cookie": cookieHeader
+                        }
+                    }
+                );
+
+                if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
+                    const payload = response.data?.data || response.data || {}
+                    req.user = payload
+                    req.decodedToken = { payload }
                     return next()
                 }
-
-                // Attach decoded token and user information to request object
-                req.decodedToken = decodedToken
-                req.user = decodedToken.payload
-            } catch (tokenError) {
-                // Token is invalid, but we'll continue without authentication
-                console.error("Optional auth token parsing error:", tokenError)
+            } catch (err: any) {
+                // 如果远程验证失败且启用降级，回退到本地解析，否则直接继续不认证
+                console.error('Optional remote validation failed:', err)
+                if (process.env.TOKEN_VALIDATION_FALLBACK === 'true') {
+                    try {
+                        const decodedToken = authService.parseJwtToken(token)
+                        const currentTime = Math.floor(Date.now() / 1000)
+                        if (decodedToken.payload && decodedToken.payload.exp && decodedToken.payload.exp < currentTime) {
+                            return next()
+                        }
+                        req.decodedToken = decodedToken
+                        req.user = decodedToken.payload
+                        return next()
+                    } catch (parseErr) {
+                        console.error('Optional local parse fallback failed:', parseErr)
+                    }
+                }
             }
 
             next()
