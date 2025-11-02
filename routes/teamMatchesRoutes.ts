@@ -7,6 +7,9 @@ import { success, error } from '../utils/responses';
 const publicRouter = express.Router();
 const protectedRouter = express.Router();
 
+// Require Casdoor authentication for protected routes
+protectedRouter.use(verifyToken);
+
 // Get all teams for a specific event with their pit-scouting status (public endpoint)
 publicRouter.get('/event/:eventKey', async (req, res) => {
     try {

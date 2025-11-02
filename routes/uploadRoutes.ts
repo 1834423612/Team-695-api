@@ -1,9 +1,11 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import multer from 'multer';
+import { requireAdmin } from '../middlewares/auth';
 import { S3Client, PutObjectCommand, ObjectCannedACL, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import pool from '../config/database'; // 引入数据库连接池
+import { verifyToken } from '../middlewares/auth';
 
 dotenv.config();
 
@@ -23,8 +25,8 @@ const s3Client = new S3Client({
     },
 });
 
-// 上传图片到 Cloudflare R2
-router.post('/upload', upload.single('file'), async (req, res) => {
+// 上传图片到 Cloudflare R2 (需要认证)
+router.post('/upload', verifyToken, upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -65,7 +67,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 });
 
 // 删除图片的 API
-router.delete('/images/:imageId', async (req, res) => {
+router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Response) => {
     const { imageId } = req.params;
 
     try {
