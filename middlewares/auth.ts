@@ -76,45 +76,59 @@ export const verifyToken = [
                 
                 // 不再进行远程验证，只依赖本地验证结果
 
-                // 远程验证token是否被撤销
+                // 远程验证 token 是否被撤销或仍然有效。
+                // 重要：不要因为 Casdoor 返回的非标准 body 而盲目把 token 加入黑名单。
+                // 只有在明确收到 401 时才将 token 加入本地黑名单；其他异常情况根据 TOKEN_VALIDATION_FALLBACK 决定是否降级为仅本地验证。
                 try {
-                    // 使用Casdoor的正确验证方式
                     const response = await axios.get(
                         `${casdoorConfig.endpoint}/api/user`,
-                        { 
+                        {
                             timeout: 3000,
-                            headers: { 
+                            headers: {
                                 "Authorization": `Bearer ${token}`,
-                                "Content-Type": "application/json" 
+                                "Content-Type": "application/json"
                             }
                         }
                     );
-                    
-                    const tokenIsActive = response?.status === 200 && response.data?.status === "ok";
-                    
-                    if (!tokenIsActive) {
-                        // Token无效，添加到本地黑名单
-                        await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
-                        console.log("Token is invalid (response not ok), adding to local blacklist");
-                        return unauthorized(res, "Token is invalid");
+
+                    // 如果 CASDOOR 返回 200，优先检查返回体中的 status 字段；
+                    // 若该字段存在且等于 "ok" 则视为通过；
+                    // 若该字段存在但不为 "ok"，不要立即加入黑名单 —— 可能是 Casdoor 的响应格式差异或临时问题。
+                    if (response.status === 200) {
+                        if (response.data && typeof response.data.status !== 'undefined') {
+                            if (response.data.status === 'ok') {
+                                // 远程验证通过
+                            } else {
+                                console.warn('Remote validation returned non-ok status:', response.data);
+                                if (process.env.TOKEN_VALIDATION_FALLBACK !== 'true') {
+                                    return unauthorized(res, 'Token validation failed');
+                                }
+                                // 否则继续使用本地解析的结果（降级模式）
+                                console.log('Proceeding with local token validation due to fallback policy');
+                            }
+                        } else {
+                            // 如果返回体没有 status 字段，但 HTTP 200 成功，认为远程可达且不明确拒绝。
+                            // 在非降级情况下，我们仍然接受 200 响应；如果需要更严格的校验，可打开 TOKEN_VALIDATION_FALLBACK 控制。
+                            console.log('Remote validation returned 200 without explicit status field; accepting remote check');
+                        }
                     }
                 } catch (validationError) {
-                    console.error("Remote token validation error in middleware:", validationError);
-                    
-                    // 检查是否是401错误，表示token被撤销或无效
+                    console.error('Remote token validation error in middleware:', validationError);
+
+                    // 只有在 Casdoor 明确返回 401（token 被撤销或无效）时，才将 token 加入本地黑名单并拒绝请求。
                     if (axios.isAxiosError(validationError) && validationError.response && validationError.response.status === 401) {
-                        // 添加到本地黑名单
                         await tokenBlacklist.addToBlacklist(token, decodedToken.payload.exp);
-                        console.log("Token was revoked or invalid (401 from Casdoor), adding to local blacklist");
-                        return unauthorized(res, "Token is invalid or has been revoked");
+                        console.log('Token was revoked or invalid (401 from Casdoor), adding to local blacklist');
+                        return unauthorized(res, 'Token is invalid or has been revoked');
                     }
-                    
-                    // 如果未设置降级验证，则认为token无效
-                    if (process.env.TOKEN_VALIDATION_FALLBACK !== "true") {
-                        return unauthorized(res, "Token validation failed");
+
+                    // 其他类型的远程验证错误（网络问题、非401响应等）
+                    if (process.env.TOKEN_VALIDATION_FALLBACK !== 'true') {
+                        console.log('Remote validation failed and fallback disabled, rejecting token');
+                        return unauthorized(res, 'Token validation failed');
                     }
-                    
-                    console.log("Using local validation only due to remote validation error");
+
+                    console.log('Remote validation failed but fallback enabled — continuing with local validation only');
                 }
 
                 // Attach decoded token and user information to request object
