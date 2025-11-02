@@ -86,6 +86,38 @@ export const verifyToken = [
                         payload = payload[0];
                     }
 
+                    // If payload lacks admin/groups info, try to fetch full account via /api/get-user
+                    const needsFullAccount = !(payload.isAdmin === true) && (!payload.groups || payload.groups.length === 0);
+                    if (needsFullAccount) {
+                        try {
+                            // determine username and owner
+                            let userName = payload.name || payload.preferred_username || payload.username || payload.sub;
+                            const userOwner = payload.owner || payload.data?.owner || casdoorConfig.orgName;
+                            if (userName) {
+                                const fullId = `${userOwner}/${userName}`;
+                                const accountRes = await axios.get(
+                                    `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}`,
+                                    {
+                                        headers: {
+                                            Authorization: `Bearer ${token}`,
+                                            "Content-Type": "application/json"
+                                        }
+                                    }
+                                );
+
+                                if (accountRes.status === 200 && accountRes.data?.status === 'ok' && accountRes.data.data) {
+                                    let accountPayload = accountRes.data.data;
+                                    if (Array.isArray(accountPayload) && accountPayload.length > 0) accountPayload = accountPayload[0];
+                                    payload = { ...payload, ...accountPayload };
+                                    // log for debug
+                                    console.log('Fetched full account info for user:', fullId);
+                                }
+                            }
+                        } catch (e: any) {
+                            console.warn('Failed to fetch full account info from Casdoor:', e?.message || e);
+                        }
+                    }
+
                     // Normalize user object safely
                     const user = {
                         id: payload.sub || payload.id || payload.userId || payload.account || payload.name || '',
