@@ -79,18 +79,23 @@ export const verifyToken = [
 
                 // 如果 Casdoor 明确通过，使用返回的数据构建 req.user
                 if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
-                    const payload = response.data?.data || response.data || {};
+                    let payload: any = response.data?.data || response.data || {};
+
+                    // If Casdoor returned an array (e.g. data: [ { user } ]), take first element
+                    if (Array.isArray(payload) && payload.length > 0) {
+                        payload = payload[0];
+                    }
 
                     // Normalize user object safely
                     const user = {
                         id: payload.sub || payload.id || payload.userId || payload.account || payload.name || '',
                         name: payload.name || payload.displayName || payload.username || '',
-                        email: payload.email || payload.data?.email || '',
+                        email: payload.email || payload.data?.email || payload.properties?.oauth_Google_email || '',
                         username: payload.preferred_username || payload.username || payload.name || '',
                         displayName: payload.data?.displayName || payload.displayName || payload.name || '',
-                        avatar: payload.data?.avatar || payload.avatar || '',
-                        isAdmin: payload.isAdmin === true || payload.data?.isAdmin === true || false,
-                        groups: payload.groups || payload.data?.groups || [],
+                        avatar: payload.data?.avatar || payload.avatar || payload.properties?.oauth_Google_avatarUrl || '',
+                        isAdmin: payload.isAdmin === true || payload.data?.isAdmin === true || payload.tag === 'admin' || false,
+                        groups: payload.groups || payload.data?.groups || payload.properties?.groups || [],
                         role: payload.role || payload.data?.role || '',
                         owner: payload.owner || payload.data?.owner || casdoorConfig.orgName,
                         raw: payload
@@ -254,7 +259,8 @@ export const optionalAuth = [
                 );
 
                 if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
-                    const payload = response.data?.data || response.data || {}
+                    let payload: any = response.data?.data || response.data || {}
+                    if (Array.isArray(payload) && payload.length > 0) payload = payload[0]
                     req.user = payload
                     req.decodedToken = { payload }
                     return next()
