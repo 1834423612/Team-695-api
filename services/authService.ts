@@ -336,36 +336,36 @@ class AuthService {
             // First verify that the token belongs to an admin (try local parse)
             const decodedToken = this.parseJwtToken(token)
             if (!this.isUserAdmin(decodedToken)) {
-                // If token payload doesn't indicate admin, try fetching full account info from Casdoor
+                // If token payload doesn't indicate admin, try fetching account info via /api/get-account (preferred)
                 try {
-                    const possibleName = decodedToken.payload.name || decodedToken.payload.preferred_username || decodedToken.payload.sub
-                    const owner = decodedToken.payload.owner || casdoorConfig.orgName
-                    if (possibleName) {
-                        const fullId = `${owner}/${possibleName}`
-                        const accountRes = await axios.get(
-                            `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}`,
-                            {
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                    "Content-Type": "application/json"
-                                },
-                                timeout: 3000
-                            }
-                        )
+                    const accountRes = await axios.get(
+                        `${casdoorConfig.endpoint}/api/get-account`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "application/json"
+                            },
+                            timeout: 3000
+                        }
+                    )
 
-                        if (accountRes.status === 200 && accountRes.data?.status === 'ok' && accountRes.data.data) {
-                            const accountPayload = Array.isArray(accountRes.data.data) ? accountRes.data.data[0] : accountRes.data.data
-                            const isAdminAccount = accountPayload.isAdmin === true || accountPayload.tag === 'admin' || (accountPayload.groups && accountPayload.groups.includes(`${casdoorConfig.orgName}/admin`) ) || (accountPayload.groups && accountPayload.groups.includes('Team695/admin'))
-                            if (!isAdminAccount) {
-                                throw new Error("Only administrators can access user list")
-                            }
-                        } else {
+                    if (accountRes.status === 200 && (accountRes.data?.status === 'ok' || accountRes.data)) {
+                        // accountRes may return the account object directly or under data
+                        let accountPayload = accountRes.data?.data || accountRes.data || {}
+                        if (Array.isArray(accountPayload) && accountPayload.length > 0) accountPayload = accountPayload[0]
+
+                        const isAdminAccount = accountPayload.isAdmin === true || accountPayload.tag === 'admin' || (accountPayload.groups && (
+                            accountPayload.groups.includes('Team695/admin') || accountPayload.groups.includes('admin')
+                        ))
+
+                        if (!isAdminAccount) {
                             throw new Error("Only administrators can access user list")
                         }
                     } else {
                         throw new Error("Only administrators can access user list")
                     }
                 } catch (e) {
+                    // If get-account fails, fall back to stricter rejection
                     throw new Error("Only administrators can access user list")
                 }
             }
