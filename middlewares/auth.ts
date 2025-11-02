@@ -183,6 +183,20 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
         }
 
         if (!isAdmin) {
+            // Debug: print a concise snapshot of the user for troubleshooting admin checks
+            try {
+                const snapshot = {
+                    isAdmin: req.user?.isAdmin,
+                    tag: req.user?.tag || req.user?.raw?.tag,
+                    groups: req.user?.groups || req.user?.raw?.groups,
+                    role: req.user?.role || req.user?.raw?.role,
+                    keys: Object.keys(req.user || {}).slice(0, 20)
+                }
+                console.warn('requireAdmin: rejected user snapshot:', JSON.stringify(snapshot))
+            } catch (e) {
+                console.warn('requireAdmin: failed to serialize user for debug')
+            }
+
             return res.status(403).json({
                 success: false,
                 message: "Admin privileges required"
