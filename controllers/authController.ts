@@ -42,19 +42,30 @@ class AuthController {
             const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
             const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
 
-            // 优先API Key
+            // 优先 API Key - 透明代理：把 Casdoor 的响应原样返回
             if (apiKey && apiSecret) {
                 try {
-                    const response = await axios.get(
+                    const casdoorRes = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
                     );
-                    if (response.status === 200 && response.data.status === "ok") {
-                        return success(res, response.data);
-                    } else {
-                        return unauthorized(res, "Invalid API Key/Secret");
+
+                    // 将 Casdoor 的 Set-Cookie 转发给客户端（如果有）
+                    const setCookie = casdoorRes.headers && (casdoorRes.headers['set-cookie'] || casdoorRes.headers['Set-Cookie']);
+                    if (setCookie) {
+                        res.setHeader('set-cookie', setCookie as string[])
                     }
-                } catch (err) {
-                    return unauthorized(res, "Invalid API Key/Secret");
+
+                    return res.status(casdoorRes.status).json(casdoorRes.data)
+                } catch (err: any) {
+                    if (axios.isAxiosError(err) && err.response) {
+                        // 转发 Casdoor 的错误响应
+                        const setCookie = err.response.headers && (err.response.headers['set-cookie'] || err.response.headers['Set-Cookie']);
+                        if (setCookie) {
+                            res.setHeader('set-cookie', setCookie as string[])
+                        }
+                        return res.status(err.response.status).json(err.response.data)
+                    }
+                    return error(res, 500, "Failed to proxy to Casdoor", err)
                 }
             }
             // JWT
@@ -65,7 +76,7 @@ class AuthController {
                     const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
                     const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
-                    const response = await axios.get(
+                    const casdoorRes = await axios.get(
                         `${casdoorConfig.endpoint}/api/user`,
                         {
                             headers: {
@@ -75,13 +86,22 @@ class AuthController {
                             }
                         }
                     );
-                    if (response.status === 200 && response.data.status === "ok") {
-                        return success(res, response.data);
-                    } else {
-                        return unauthorized(res, "Invalid token");
+
+                    const setCookie = casdoorRes.headers && (casdoorRes.headers['set-cookie'] || casdoorRes.headers['Set-Cookie']);
+                    if (setCookie) {
+                        res.setHeader('set-cookie', setCookie as string[])
                     }
-                } catch (err) {
-                    return unauthorized(res, "Invalid token");
+
+                    return res.status(casdoorRes.status).json(casdoorRes.data)
+                } catch (err: any) {
+                    if (axios.isAxiosError(err) && err.response) {
+                        const setCookie = err.response.headers && (err.response.headers['set-cookie'] || err.response.headers['Set-Cookie']);
+                        if (setCookie) {
+                            res.setHeader('set-cookie', setCookie as string[])
+                        }
+                        return res.status(err.response.status).json(err.response.data)
+                    }
+                    return error(res, 500, "Failed to proxy to Casdoor", err)
                 }
             }
             return unauthorized(res, "Please provide a valid JWT token or API Key/Secret");
@@ -100,30 +120,38 @@ class AuthController {
             if (!token) {
                 return error(res, 400, "Token required")
             }
-            try {
-                const incomingCookies = (req.headers.cookie || "").toString();
-                const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
-                const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
+                try {
+                    const incomingCookies = (req.headers.cookie || "").toString();
+                    const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                    const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
-                console.log('Proxying /api/user to Casdoor with Cookie:', cookieHeader)
-                const response = await axios.get(
-                    `${casdoorConfig.endpoint}/api/user`,
-                    {
-                        headers: {
-                            "Authorization": `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                            "Cookie": cookieHeader
+                    const casdoorRes = await axios.get(
+                        `${casdoorConfig.endpoint}/api/user`,
+                        {
+                            headers: {
+                                "Authorization": `Bearer ${token}`,
+                                "Content-Type": "application/json",
+                                "Cookie": cookieHeader
+                            }
                         }
+                    );
+
+                    const setCookie = casdoorRes.headers && (casdoorRes.headers['set-cookie'] || casdoorRes.headers['Set-Cookie']);
+                    if (setCookie) {
+                        res.setHeader('set-cookie', setCookie as string[])
                     }
-                );
-                if (response.status === 200 && response.data.status === "ok") {
-                    return success(res, response.data);
-                } else {
-                    return unauthorized(res, "Invalid token");
+
+                    return res.status(casdoorRes.status).json(casdoorRes.data)
+                } catch (err: any) {
+                    if (axios.isAxiosError(err) && err.response) {
+                        const setCookie = err.response.headers && (err.response.headers['set-cookie'] || err.response.headers['Set-Cookie']);
+                        if (setCookie) {
+                            res.setHeader('set-cookie', setCookie as string[])
+                        }
+                        return res.status(err.response.status).json(err.response.data)
+                    }
+                    return error(res, 500, "Failed to proxy to Casdoor", err)
                 }
-            } catch (err) {
-                return unauthorized(res, "Invalid token");
-            }
         } catch (err) {
             return error(res, 500, "Failed to get user information", err);
         }
