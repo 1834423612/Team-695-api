@@ -60,12 +60,18 @@ class AuthController {
             // JWT
             if (token) {
                 try {
+                    // Forward incoming cookies if present, and always include casdoor-token cookie
+                    const incomingCookies = (req.headers.cookie || "").toString();
+                    const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                    const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
+
                     const response = await axios.get(
                         `${casdoorConfig.endpoint}/api/user`,
                         {
                             headers: {
                                 "Authorization": `Bearer ${token}`,
-                                "Content-Type": "application/json"
+                                "Content-Type": "application/json",
+                                "Cookie": cookieHeader
                             }
                         }
                     );
@@ -95,12 +101,18 @@ class AuthController {
                 return error(res, 400, "Token required")
             }
             try {
+                const incomingCookies = (req.headers.cookie || "").toString();
+                const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
+
+                console.log('Proxying /api/user to Casdoor with Cookie:', cookieHeader)
                 const response = await axios.get(
                     `${casdoorConfig.endpoint}/api/user`,
                     {
                         headers: {
                             "Authorization": `Bearer ${token}`,
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            "Cookie": cookieHeader
                         }
                     }
                 );
@@ -144,13 +156,19 @@ class AuthController {
                 }
             } else if (token) {
                 try {
+                    const incomingCookies = (req.headers.cookie || "").toString();
+                    const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
+                    const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
+
+                    console.log('Proxying /api/user to Casdoor with Cookie:', cookieHeader)
                     const response = await axios.get(
                         `${casdoorConfig.endpoint}/api/user`,
                         {
                             timeout: 3000,
                             headers: {
                                 "Authorization": `Bearer ${token}`,
-                                "Content-Type": "application/json"
+                                "Content-Type": "application/json",
+                                "Cookie": cookieHeader
                             }
                         }
                     );
