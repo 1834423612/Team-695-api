@@ -102,7 +102,7 @@ router.get('/query', async (req, res) => {
     }
 
     if (teamNumber) {
-        query += ' AND JSON_EXTRACT(data, "$.Team number") = ?';
+        query += ' AND JSON_EXTRACT(data, "$.teamNumber") = ?';
         queryParams.push(teamNumber);
     }
 
