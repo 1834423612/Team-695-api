@@ -21,18 +21,18 @@ interface Images {
     driveTrainImages: ImageData[];
 }
 
-// 在需要认证的路由上应用 verifyToken 中间件
+// Apply verifyToken middleware to routes requiring authentication
 router.use('/submit', verifyToken);
 router.use('/query', verifyToken);
 
-// 提交问卷 API
+// Survey submission API
 /*
-    调用提交 API：使用 POST 方法调用 /api/survey/submit 端点，传递以下参数：
-        eventId: string; // 事件 ID
-        tabs: Tab[]; // 表单数据数组，每个表单包含 formId 和 formData
-        images: Images; // 图片数据，包含 fullRobotImages 和 driveTrainImages
-        userData: { email: string; avatar: string; userId: string; username: string; displayName: string; }; // User Data, Including email、avatar、userId、username and displayName
-        deviceInfo: any; // 设备信息，包括 userAgent、ip 和 language
+    Call submission API: Use POST method to call /api/survey/submit endpoint with the following parameters:
+        eventId: string; // Event ID
+        tabs: Tab[]; // Form data array, each form contains formId and formData
+        images: Images; // Image data, containing fullRobotImages and driveTrainImages
+        userData: { email: string; avatar: string; userId: string; username: string; displayName: string; }; // User Data, Including email, avatar, userId, username and displayName
+        deviceInfo: any; // Device info, including userAgent, ip and language
 */
 router.post('/submit', async (req, res) => {
     const { eventId, tabs, images, userData, deviceInfo }: { 
@@ -50,7 +50,7 @@ router.post('/submit', async (req, res) => {
                 return acc;
             }, {});
 
-            // 确保 images 数据存在
+            // Ensure images data exists
             const tabImages = images || { fullRobotImages: [], driveTrainImages: [] };
 
             const { userAgent, ip, language } = deviceInfo;
@@ -77,13 +77,13 @@ router.post('/submit', async (req, res) => {
     }
 });
 
-// 新增查询 API
+// Query API
 /*
-    调用查询 API：使用不同的查询参数调用 /api/survey/query 端点，例如：
-        获取所有问卷信息：GET /api/survey/query
-        根据 eventId 查询：GET /api/survey/query?eventId=Event123
-        根据 formId 查询：GET /api/survey/query?formId=f36c46f5-aa42-4d3b-880b-cb301719bc5c
-        根据 teamNumber 查询：GET /api/survey/query?teamNumber=89898899
+    Call query API: Use different query parameters to call /api/survey/query endpoint, for example:
+        Get all survey info: GET /api/survey/query
+        Query by eventId: GET /api/survey/query?eventId=Event123
+        Query by formId: GET /api/survey/query?formId=f36c46f5-aa42-4d3b-880b-cb301719bc5c
+        Query by teamNumber: GET /api/survey/query?teamNumber=89898899
 */ 
 router.get('/query', async (req, res) => {
     const { eventId, formId, teamNumber } = req.query;

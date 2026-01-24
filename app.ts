@@ -11,7 +11,7 @@ import morgan from "morgan"
 import os from 'os'
 import { performHealthCheck } from "./utils/healthCheck"
 
-// 添加类型声明扩展，使rawBody在Request对象上可用
+// Type declarations to extend Request object with rawBody property
 declare global {
     namespace Express {
         interface Request {
@@ -120,13 +120,12 @@ app.use(
     }),
 )
 
-// Body parser中间件配置
-// 使用json解析但保留原始文本
+// Body parser middleware configuration
 app.use(bodyParser.json({
     verify: (req: any, res, buf) => {
-        // 保存原始请求体以便HMAC验证
-        req.rawBody = buf.toString(); // 保存为字符串
-        req.rawBodyBuffer = buf;     // 也保存原始缓冲区以防需要
+        // Save raw request body for HMAC verification
+        req.rawBody = buf.toString();
+        req.rawBodyBuffer = buf;
         console.log("Raw body captured:", req.rawBody);
     }
 }));
@@ -138,20 +137,20 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: tr
 // API Endpoint routes
 const apiRouter = express.Router()
 
-// 所有公共路由 - 无需认证
+// Public routes - no authentication required
 apiRouter.use("/auth", authRoutes)
 apiRouter.use("/team", teamRoutes)
 apiRouter.use("/webhook", webhookRoutes)
 apiRouter.use("/team-matches", publicTeamMatchesRoutes)
 apiRouter.use("/event-id", eventRoutes)
-apiRouter.use("/event", eventRoutes)  // 现在所有event路由都无需认证
-apiRouter.use("/survey", surveyRoutes) // 问卷路由暂时无需认证
-apiRouter.use("/upload", uploadRoutes) // 上传路由暂时无需认证
-apiRouter.use("/assignments", assignmentRoutes) // 任务路由暂时无需认证
-apiRouter.use("/team-matches", protectedTeamMatchesRoutes) // 所有团队匹配路由暂时无需认证
+apiRouter.use("/event", eventRoutes)
+apiRouter.use("/survey", surveyRoutes)
+apiRouter.use("/upload", uploadRoutes)
+apiRouter.use("/assignments", assignmentRoutes)
+apiRouter.use("/team-matches", protectedTeamMatchesRoutes)
 
-// 只有删除操作需要认证 - 通过特定的路由处理
-apiRouter.use("/upload/images", verifyToken); // 删除图片需要认证
+// Only delete operations require authentication
+apiRouter.use("/upload/images", verifyToken);
 apiRouter.use("/assignments/:id", (req, res, next) => {
     if (req.method === 'DELETE') {
         // If verifyToken is an array, apply the middleware

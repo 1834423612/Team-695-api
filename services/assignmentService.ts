@@ -4,8 +4,8 @@ import crypto from 'crypto';
 
 class AssignmentService {
     /**
-     * 生成随机短ID
-     * 生成8字符的随机字符串作为ID
+     * Generate random short ID
+     * Creates 8-character random string as ID
      */
     private generateShortId(): string {
         return crypto.randomBytes(4).toString('hex');
@@ -22,11 +22,11 @@ class AssignmentService {
                 assigned_team_numbers,
                 assigned_alliance,
                 assigned_matches,
-                assignees_data, // 改为多个被指派人
+                assignees_data,
                 notes
             } = assignment;
 
-            // 生成随机短ID
+            // Generate random short ID
             const shortId = this.generateShortId();
 
             const [result]: any = await pool.query(
@@ -41,7 +41,7 @@ class AssignmentService {
                     assigned_alliance || null,
                     assigned_matches || null,
                     JSON.stringify(assigner),
-                    JSON.stringify(assignees_data), // 存储多个被指派人数组
+                    JSON.stringify(assignees_data),
                     notes || null
                 ]
             );
@@ -74,7 +74,7 @@ class AssignmentService {
                 'assigned_team_numbers',
                 'assigned_alliance',
                 'assigned_matches',
-                'assignees_data', // 添加此字段以允许更新指派人员
+                'assignees_data',
                 'status',
                 'notes'
             ];
@@ -129,7 +129,7 @@ class AssignmentService {
      */
     async getUserAssignments(eventKey: string, userId: string): Promise<TaskAssignmentResponse[]> {
         try {
-            // 先获取所有该事件的任务
+            // Get all tasks for this event first
             const [rows]: any = await pool.query(
                 `SELECT * FROM task_assignments 
                 WHERE event_key = ? 
@@ -137,10 +137,10 @@ class AssignmentService {
                 [eventKey]
             );
             
-            // 在应用层面过滤包含特定userId的任务
+            // Filter tasks containing specific userId at application layer
             const userAssignments = rows.filter((row: any) => {
                 try {
-                    // 确保正确解析JSON数据
+                    // Ensure proper JSON data parsing
                     let assignees: any[] = [];
                     if (typeof row.assignees_data === 'string') {
                         assignees = JSON.parse(row.assignees_data);
@@ -148,17 +148,17 @@ class AssignmentService {
                         assignees = row.assignees_data;
                     }
                     
-                    // 确认assignees是否为数组
+                    // Verify assignees is an array
                     if (!Array.isArray(assignees)) {
                         console.error(`assignees_data is not an array for assignment ${row.id}`);
                         return false;
                     }
                     
-                    // 检查是否包含指定用户ID，支持多种ID字段格式
+                    // Check if specified user ID exists, supporting multiple ID field formats
                     const hasUser = assignees.some(assignee => 
                         (assignee.userId === userId) || 
                         (assignee.id === userId) ||
-                        // 字符串比较
+                        // String comparison
                         (String(assignee.userId) === String(userId)) || 
                         (String(assignee.id) === String(userId))
                     );
@@ -215,7 +215,7 @@ class AssignmentService {
      * Format assignment data from database
      */
     private formatAssignment(row: any): TaskAssignmentResponse {
-        // 处理可能已经是对象或者是JSON字符串的字段
+        // Handle fields that may already be objects or JSON strings
         const parseJsonField = (field: any): any => {
             if (!field) return null;
             if (typeof field === 'object') return field;
@@ -235,7 +235,7 @@ class AssignmentService {
             assigned_alliance: row.assigned_alliance,
             assigned_matches: row.assigned_matches,
             assigner_data: parseJsonField(row.assigner_data),
-            assignees_data: parseJsonField(row.assignees_data), // 解析多个被指派人数组
+            assignees_data: parseJsonField(row.assignees_data), // Parse multiple assignees array
             status: row.status,
             notes: row.notes,
             created_at: row.created_at,

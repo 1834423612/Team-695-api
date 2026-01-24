@@ -10,14 +10,14 @@ export interface UserData {
 }
 
 export interface TaskAssignment {
-    id?: string; // 改为字符串类型的ID
+    id?: string;
     event_key: string;
     task_type: 'scouting' | 'pit-scouting';
     assigned_team_numbers?: number[];
     assigned_alliance?: 'red' | 'blue';
     assigned_matches?: string;
     assigner_data: UserData;
-    assignees_data: UserData[]; // 修改为用户数组
+    assignees_data: UserData[];
     status?: 'pending' | 'in_progress' | 'completed' | 'canceled';
     notes?: string;
     created_at?: string;
@@ -25,14 +25,14 @@ export interface TaskAssignment {
 }
 
 export interface TaskAssignmentResponse {
-    id: string; // 改为字符串类型的ID
+    id: string;
     event_key: string;
     task_type: string;
     assigned_team_numbers: number[] | null;
     assigned_alliance: string | null;
     assigned_matches: string | null;
     assigner_data: UserData;
-    assignees_data: UserData[]; // 修改为用户数组
+    assignees_data: UserData[];
     status: string;
     notes: string | null;
     created_at: string;
@@ -45,6 +45,6 @@ export interface CreateAssignmentRequest {
     assigned_team_numbers?: number[];
     assigned_alliance?: 'red' | 'blue';
     assigned_matches?: string;
-    assignees_data: UserData[]; // 修改为用户数组
+    assignees_data: UserData[];
     notes?: string;
 }

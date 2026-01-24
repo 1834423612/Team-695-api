@@ -23,11 +23,11 @@ class AuthController {
 
     /**
      * Get current user information
-     * 只转发到Casdoor，不做本地鉴权
+     * Forward to Casdoor only, no local authentication
      */
     async getCurrentUser(req: Request, res: Response) {
         try {
-            // 获取token或API Key/Secret
+            // Get token or API Key/Secret
             let token: string | undefined;
             const authHeader = req.headers.authorization;
             if (authHeader) {
@@ -42,14 +42,14 @@ class AuthController {
             const apiKey = req.headers["x-api-key"] as string || req.query.accessKey as string;
             const apiSecret = req.headers["x-api-secret"] as string || req.query.accessSecret as string;
 
-            // 优先 API Key - 透明代理：把 Casdoor 的响应原样返回
+            // Prefer API Key - proxy transparently to Casdoor
             if (apiKey && apiSecret) {
                 try {
                     const casdoorRes = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
                     );
 
-                    // 将 Casdoor 的 Set-Cookie 转发给客户端（如果有）
+                    // Forward Casdoor's Set-Cookie to client if present
                     const setCookie = casdoorRes.headers && (casdoorRes.headers['set-cookie'] || casdoorRes.headers['Set-Cookie']);
                     if (setCookie) {
                         res.setHeader('set-cookie', setCookie as string[])
@@ -58,7 +58,7 @@ class AuthController {
                     return res.status(casdoorRes.status).json(casdoorRes.data)
                 } catch (err: any) {
                     if (axios.isAxiosError(err) && err.response) {
-                        // 转发 Casdoor 的错误响应
+                        // Forward Casdoor's error response
                         const setCookie = err.response.headers && (err.response.headers['set-cookie'] || err.response.headers['Set-Cookie']);
                         if (setCookie) {
                             res.setHeader('set-cookie', setCookie as string[])
@@ -112,7 +112,7 @@ class AuthController {
 
     /**
      * Get user information from token
-     * 只转发到Casdoor，不做本地鉴权
+     * Forward to Casdoor only, no local authentication
      */
     async getUserInfoFromToken(req: Request, res: Response) {
         try {
@@ -159,7 +159,7 @@ class AuthController {
 
     /**
      * Validate token
-     * 只转发到Casdoor，不做本地鉴权
+     * Forward to Casdoor only, no local authentication
      */
     async validateToken(req: Request, res: Response) {
         try {
@@ -234,7 +234,7 @@ class AuthController {
 
     /**
      * Logout user by revoking token
-     * 只转发到Casdoor，不做本地黑名单
+     * Only forwards to Casdoor, no local blacklist
      */
     async logout(req: Request, res: Response) {
         try {
@@ -254,7 +254,7 @@ class AuthController {
 
     /**
      * Force revoke a specific token (admin only)
-     * 只转发到Casdoor，不做本地黑名单
+     * Only forwards to Casdoor, no local blacklist
      */
     async revokeSpecificToken(req: Request, res: Response) {
         try {
@@ -274,7 +274,7 @@ class AuthController {
 
     /**
      * Get all users in the organization (admin only)
-     * 只转发到Casdoor，不做本地isAdmin判断
+     * Only forwards to Casdoor, no local isAdmin check
      */
     async getAllUsers(req: Request, res: Response) {
         try {
@@ -306,7 +306,7 @@ class AuthController {
 
     /**
      * Generate API keys for the authenticated user
-     * 只转发到Casdoor
+     * Only forwards to Casdoor
      */
     async generateApiKey(req: Request, res: Response) {
         try {

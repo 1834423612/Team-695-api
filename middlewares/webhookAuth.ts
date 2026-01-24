@@ -4,18 +4,18 @@ import { error } from '../utils/responses';
 
 export const verifyTbaWebhook = (req: Request, res: Response, next: NextFunction) => {
     try {
-        // 添加调试日志
+        // Add debug logs
         console.log('Received TBA webhook request:');
         console.log('Headers:', JSON.stringify(req.headers));
         console.log('Body:', JSON.stringify(req.body));
 
-        // 开发环境下可选择跳过HMAC验证
+        // Optionally skip HMAC verification in development environment
         if (process.env.NODE_ENV === 'development' && process.env.SKIP_TBA_HMAC_VERIFY === 'true') {
             console.log('Skipping HMAC verification in development mode');
             return next();
         }
 
-        // 获取HMAC头
+        // Get HMAC header
         const hmacHeader = req.headers['x-tba-hmac'];
         
         if (!hmacHeader) {
@@ -26,7 +26,7 @@ export const verifyTbaWebhook = (req: Request, res: Response, next: NextFunction
             return error(res, 401, 'Missing X-TBA-HMAC header');
         }
 
-        // 获取webhook密钥
+        // Get webhook secret
         const webhookSecret = process.env.TBA_WEBHOOK_SECRET;
 
         if (!webhookSecret) {
@@ -34,7 +34,7 @@ export const verifyTbaWebhook = (req: Request, res: Response, next: NextFunction
             return error(res, 500, 'Server configuration error');
         }
 
-        // 使用正确的HMAC算法计算签名
+        // Calculate signature using correct HMAC algorithm
         if (req.rawBody) {
             console.log('Using rawBody for HMAC calculation');
             const hmac = crypto.createHmac('sha256', webhookSecret);
@@ -45,7 +45,7 @@ export const verifyTbaWebhook = (req: Request, res: Response, next: NextFunction
             console.log('Received HMAC:', hmacHeader);
             console.log('Calculated HMAC:', calculatedHmac);
             
-            // 在开发环境中，即使验证失败也继续
+            // Continue even if verification fails in development environment
             if (calculatedHmac !== hmacHeader && process.env.NODE_ENV !== 'development') {
                 return error(res, 401, 'Invalid X-TBA-HMAC signature');
             }
@@ -60,7 +60,7 @@ export const verifyTbaWebhook = (req: Request, res: Response, next: NextFunction
     }
 };
 
-// 创建一个不验证HMAC的中间件，用于测试
+// Create a middleware that doesn't verify HMAC, for testing
 export const skipTbaWebhookVerify = (req: Request, res: Response, next: NextFunction) => {
     console.log('Skipping HMAC verification for TBA webhook');
     console.log('Headers:', JSON.stringify(req.headers));

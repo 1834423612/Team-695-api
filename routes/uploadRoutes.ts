@@ -4,18 +4,18 @@ import { requireAdmin } from '../middlewares/auth';
 import { S3Client, PutObjectCommand, ObjectCannedACL, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-import pool from '../config/database'; // 引入数据库连接池
+import pool from '../config/database'; // Import database connection pool
 import { verifyToken } from '../middlewares/auth';
 
 dotenv.config();
 
 const router = express.Router();
 
-// 设置 multer 存储配置
+// Configure multer storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// 配置 S3 客户端
+// Configure S3 client
 const s3Client = new S3Client({
     endpoint: process.env.R2_ENDPOINT,
     region: 'auto',
@@ -25,7 +25,7 @@ const s3Client = new S3Client({
     },
 });
 
-// 上传图片到 Cloudflare R2 (需要认证)
+// Upload image to Cloudflare R2 (requires authentication)
 router.post('/upload', verifyToken, upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) {
@@ -34,7 +34,7 @@ router.post('/upload', verifyToken, upload.single('file'), async (req: Request, 
 
         const { type } = req.body;
 
-        // 从数据库获取最新的 eventId
+        // Fetch the latest eventId from database
         const [rows]: any = await pool.query('SELECT event_id FROM events ORDER BY event_date DESC LIMIT 1');
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Event not found' });
@@ -66,12 +66,12 @@ router.post('/upload', verifyToken, upload.single('file'), async (req: Request, 
     }
 });
 
-// 删除图片的 API
+// Delete image API
 router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Response) => {
     const { imageId } = req.params;
 
     try {
-        // 从数据库中获取图片的 URL
+        // Get image URL from database
         const [rows]: any = await pool.query('SELECT upload FROM survey_responses WHERE JSON_CONTAINS(upload, ?)', [JSON.stringify({ url: imageId })]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Image not found' });
@@ -84,7 +84,7 @@ router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Respon
 
         const fileKey = imageUrl.url.split(`${process.env.CUSTOM_DOMAIN}/`)[1];
 
-        // 从 Cloudflare R2 中删除图片
+        // Delete image from Cloudflare R2
         const deleteParams = {
             Bucket: process.env.R2_BUCKET_NAME!,
             Key: fileKey,
@@ -93,7 +93,7 @@ router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Respon
         const deleteCommand = new DeleteObjectCommand(deleteParams);
         await s3Client.send(deleteCommand);
 
-        // 从数据库中删除图片记录
+        // Delete image record from database
         await pool.query('UPDATE survey_responses SET upload = JSON_REMOVE(upload, ?) WHERE JSON_CONTAINS(upload, ?)', [`$.fullRobotImages[${rows[0].upload.fullRobotImages.indexOf(imageUrl)}]`, JSON.stringify({ url: imageId })]);
 
         res.status(200).json({ message: 'Image deleted successfully' });

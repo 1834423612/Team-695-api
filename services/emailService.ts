@@ -15,12 +15,12 @@ const loadTemplate = (data: any) => {
     let template = fs.readFileSync(templatePath, 'utf-8');
     const sendTimeInEDT = toEDT(data.timestamp);
 
-    // 替换模板中的变量
+    // Replace template variables
     template = template.replace(/{name}/g, data.nickname)
         .replace(/{email}/g, data.contact)
         .replace(/{Title}/g, data.title)
-        .replace(/{message}/g, data.content) // 保留 HTML 格式
-        .replace(/{sendtime}/g, sendTimeInEDT) // 转换为 EDT
+        .replace(/{message}/g, data.content)
+        .replace(/{sendtime}/g, sendTimeInEDT)
         .replace(/{IP}/g, data.deviceInfo.ip)
         .replace(/{UA}/g, data.deviceInfo.userAgent)
         .replace(/{Screen}/g, data.deviceInfo.screenSize)
@@ -31,8 +31,8 @@ const loadTemplate = (data: any) => {
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || '465', 10), // Default to port 465 if undefined
-    secure: true, // 使用 SSL
+    port: parseInt(process.env.EMAIL_PORT || '465', 10),
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -42,12 +42,12 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (feedback: any) => {
     const htmlContent = loadTemplate(feedback);
 
-    // 将管理员邮箱转换为数组，以便发送给多个管理员
+    // Convert admin emails to array for multiple recipients
     const adminEmails = process.env.ADMIN_EMAIL ? process.env.ADMIN_EMAIL.split(',') : [];
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: adminEmails, // 管理员邮箱
+        to: adminEmails,
         subject: `[695 Website] New Message from ${feedback.nickname}`,
         html: htmlContent,
     };

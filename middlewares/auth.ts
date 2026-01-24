@@ -19,13 +19,13 @@ declare global {
 }
 
 /**
- * 组合验证中间件 - 先尝试 API Key，如果失败则尝试 JWT
+ * Combined authentication middleware - tries API Key first, falls back to JWT
  */
 export const verifyToken = [
     verifyApiKey,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            // 如果已通过 API Key 验证，直接继续
+            // If already authenticated via API Key, continue
             if (req.apiAuthenticated) {
                 return next()
             }
@@ -59,7 +59,7 @@ export const verifyToken = [
                 return unauthorized(res, "Token has been revoked")
             }
 
-            // 透明代理到 Casdoor 验证 token（优先），成功后使用 Casdoor 返回的数据作为 req.user
+            // Proxy to Casdoor for token verification (preferred), use Casdoor's response data as req.user
             try {
                 const incomingCookies = (req.headers.cookie || "").toString();
                 const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
@@ -77,7 +77,7 @@ export const verifyToken = [
                     }
                 );
 
-                // 如果 Casdoor 明确通过，使用返回的数据构建 req.user
+                // If Casdoor validates successfully, build req.user from response data
                 if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
                     let payload: any = response.data?.data || response.data || {};
 
@@ -140,10 +140,10 @@ export const verifyToken = [
                     return next();
                 }
             } catch (validationError: any) {
-                // 如果 Casdoor 明确返回 401，加入黑名单并拒绝。
+                // If Casdoor returns 401, add to blacklist and reject
                 if (axios.isAxiosError(validationError) && validationError.response && validationError.response.status === 401) {
                     try {
-                        // 尝试解析 exp 用于黑名单过期时间
+                        // Parse exp for blacklist expiration time
                         const decoded = authService.parseJwtToken(token)
                         await tokenBlacklist.addToBlacklist(token, decoded.payload?.exp)
                         console.log('Token added to blacklist, expires at:', new Date((decoded.payload?.exp || 0) * 1000).toISOString())
@@ -153,7 +153,7 @@ export const verifyToken = [
                     return unauthorized(res, 'Token is invalid or has been revoked')
                 }
 
-                // 其他错误（网络、超时等）根据 TOKEN_VALIDATION_FALLBACK 决定是否回退到本地解析
+                // For other errors (network, timeout, etc.), fallback to local parsing based on TOKEN_VALIDATION_FALLBACK
                 console.error('Remote validation error:', validationError)
                 if (process.env.TOKEN_VALIDATION_FALLBACK === 'true') {
                     try {
@@ -195,7 +195,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
 
         let isAdmin = false;
 
-        // 对于 API Key 认证
+        // For API Key authentication
         if (req.apiAuthenticated) {
             isAdmin = req.user.isAdmin === true || 
                 (req.user.groups && (
@@ -203,7 +203,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
                     req.user.groups.includes("Team695/admin")
                 ));
         } 
-        // 对于 JWT 认证
+        // For JWT authentication
         else {
             isAdmin =
                 req.user.role === "admin" ||
@@ -252,7 +252,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
 export const optionalAuth = [
     verifyApiKey,
     async (req: Request, res: Response, next: NextFunction) => {
-        // 如果已通过 API Key 验证，直接继续
+        // If already authenticated via API Key, continue
         if (req.apiAuthenticated) {
             return next()
         }
@@ -286,7 +286,7 @@ export const optionalAuth = [
             // Set token to request object
             req.token = token
 
-            // 尝试使用 Casdoor 验证 token（非阻塞），如果失败则回退到本地解析或继续不认证
+            // Try Casdoor token validation (non-blocking), fallback to local parsing or continue without auth if failed
             try {
                 const incomingCookies = (req.headers.cookie || "").toString();
                 const hasCasdoorToken = incomingCookies.includes("casdoor-token=");
@@ -312,7 +312,7 @@ export const optionalAuth = [
                     return next()
                 }
             } catch (err: any) {
-                // 如果远程验证失败且启用降级，回退到本地解析，否则直接继续不认证
+                // If remote validation fails and fallback enabled, use local parsing; otherwise continue without auth
                 console.error('Optional remote validation failed:', err)
                 if (process.env.TOKEN_VALIDATION_FALLBACK === 'true') {
                     try {

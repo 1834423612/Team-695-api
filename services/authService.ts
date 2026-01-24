@@ -77,12 +77,12 @@ class AuthService {
     }
 
     /**
-     * 使用API Key和Secret从Casdoor获取用户信息
-     * 这允许API客户端绕过JWT流程直接使用API Key进行认证
+     * Get user info from Casdoor using API Key and Secret
+     * This allows API clients to authenticate directly with API Key, bypassing JWT flow
      */
     async getUserInfoWithApiKey(apiKey: string, apiSecret: string) {
         try {
-            // 根据Casdoor文档，使用URL参数方式调用API
+            // Call Casdoor API using URL parameters as per documentation
             const response = await axios.get(
                 `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
             );
@@ -93,7 +93,7 @@ class AuthService {
             
             const userData = response.data;
             
-            // 创建与JWT认证相似结构的用户对象
+            // Create user object with similar structure to JWT authentication
             const user = {
                 id: userData.sub || userData.id || '',
                 name: userData.name || '',
@@ -101,7 +101,7 @@ class AuthService {
                 username: userData.name || '',
                 displayName: userData.data?.displayName || userData.name || '',
                 avatar: userData.data?.avatar || '',
-                // 检查管理员权限
+                // Check admin permissions
                 isAdmin: 
                     userData.data?.isAdmin === true || 
                     (userData.data?.roles && userData.data.roles.some((r: any) => r.name === "admin")) ||
@@ -258,7 +258,7 @@ class AuthService {
                 details: results
             }
         } catch (error) {
-            // 只返回失败，不做任何本地拉黑
+            // Return failure without any local blacklisting
             return { success: false, error: (error as Error).message }
         }
     }
@@ -290,27 +290,27 @@ class AuthService {
     }
 
     /**
-     * 安全地检查用户是否是管理员，可以处理不同格式的用户数据
+     * Safely check if user is admin, handles different user data formats
      */
     isUserAdminSafe(userData: any): boolean {
-        // 如果接收到的是 DecodedToken 类型
+        // If receiving DecodedToken type
         if (userData && userData.payload) {
             return this.isUserAdmin(userData);
         }
         
-        // 如果直接接收到用户数据
+        // If receiving user data directly
         if (userData) {
-            // 检查管理员角色
+            // Check admin role
             if (userData.role === "admin" || userData.isAdmin === true) {
                 return true;
             }
 
-            // 检查用户是否在管理员组中
+            // Check if user is in admin group
             if (userData.groups && Array.isArray(userData.groups)) {
                 return userData.groups.includes("admin") || userData.groups.includes("Team695/admin");
             }
 
-            // 检查用户是否具有管理员权限
+            // Check if user has admin permissions
             if (userData.permissions && Array.isArray(userData.permissions)) {
                 return userData.permissions.some(
                     (p: string | any) => typeof p === "string" && (p.includes("admin") || p.includes("Admin") || p === "*")
@@ -486,46 +486,46 @@ class AuthService {
     }
 
     /**
-     * 规范化用户ID，确保格式一致
-     * @param userId 用户ID（可以是纯ID、用户名或org/name格式）
-     * @returns 标准格式的用户ID（org/name）
+     * Normalize user ID to ensure consistent format
+     * @param userId User ID (can be plain ID, username or org/name format)
+     * @returns Standardized user ID (org/name format)
      */
     normalizeUserId(userId: string): string {
         if (!userId) return '';
         
-        // 如果已经是org/name格式，直接返回
+        // If already in org/name format, return directly
         if (userId.includes('/')) {
             return userId;
         }
         
-        // 如果是纯数字ID或其他格式，添加组织前缀
+        // If numeric ID or other format, add organization prefix
         return `${casdoorConfig.orgName}/${userId}`;
     }
 
     /**
-     * 尝试多种ID格式获取用户信息
-     * @param userId 用户ID（可能是多种格式）
-     * @param token JWT令牌
-     * @param apiKey API Key（可选）
-     * @param apiSecret API Secret（可选）
-     * @returns 用户信息
+     * Try multiple ID formats to get user info
+     * @param userId User ID (may be in various formats)
+     * @param token JWT token
+     * @param apiKey API Key (optional)
+     * @param apiSecret API Secret (optional)
+     * @returns User info
      */
     async getUserWithMultipleFormats(userId: string, token?: string, apiKey?: string, apiSecret?: string): Promise<any> {
-        // 准备可能的ID格式
+        // Prepare possible ID formats
         const possibleIds = [];
         
-        // 添加原始ID
+        // Add original ID
         possibleIds.push(userId);
         
-        // 如果包含斜杠，添加斜杠后部分
+        // If contains slash, add the part after slash
         if (userId.includes('/')) {
             possibleIds.push(userId.split('/')[1]);
         } else {
-            // 如果不包含斜杠，添加带组织前缀的版本
+            // If no slash, add version with organization prefix
             possibleIds.push(`${casdoorConfig.orgName}/${userId}`);
         }
         
-        // 如果ID看起来像邮箱地址，添加用户名部分作为可能ID
+        // If ID looks like an email, add username part as possible ID
         if (userId.includes('@')) {
             const emailUsername = userId.split('@')[0];
             possibleIds.push(emailUsername);
@@ -533,11 +533,11 @@ class AuthService {
             console.log(`ID appears to be an email, adding username part: ${emailUsername}`);
         }
         
-        // 大多数是 Google ID 的情况，尝试通过名称查找
-        // 如果ID看起来像Google ID（很长的数字字符串）
+        // For Google ID cases, try finding by name
+        // If ID looks like Google ID (long numeric string)
         if (userId.match(/^\d{20,}$/)) {
             try {
-                // 先尝试通过API Key或Token获取当前账户信息
+                // Try to get current account info using API Key or Token
                 const currentUserInfo = apiKey && apiSecret ? 
                     await this.getCurrentUserWithApiKey(apiKey, apiSecret) : 
                     (token ? await this.getCurrentUserWithToken(token) : null);
@@ -547,10 +547,10 @@ class AuthService {
                     possibleIds.push(currentUserInfo.name);
                     possibleIds.push(`${casdoorConfig.orgName}/${currentUserInfo.name}`);
                     
-                    // 尝试通过查询所有用户来查找匹配的用户
+                    // Try to find matching user by listing all users
                     try {
                         console.log("Attempting to find user by listing all users and matching Google ID...");
-                        // 通过列出用户尝试查找匹配的 Google ID
+                        // List users to find matching Google ID
                         const users = await this.listAllUsers(apiKey, apiSecret, token);
                         console.log(`Retrieved ${users?.length} users to search for Google ID match`);
                         const foundUser = users.find((u: any) => u.id === userId || u.google === userId);
@@ -569,7 +569,7 @@ class AuthService {
             }
         }
         
-        // 如果用户ID短且看起来像用户名，也尝试用它直接查询用户列表
+        // If user ID is short and looks like username, try finding directly in user list
         if (userId.length < 20 && !userId.includes('/') && !userId.includes('@')) {
             try {
                 console.log("Short user ID detected, attempting to find in user list directly...");
@@ -589,19 +589,19 @@ class AuthService {
             }
         }
         
-        // 记录尝试的ID
+        // Log attempted ID formats
         console.log("Trying multiple user ID formats:", possibleIds);
         
-        // 对每个可能的ID尝试获取用户信息
+        // Try to get user info for each possible ID
         for (const id of possibleIds) {
             try {
                 let response;
                 if (apiKey && apiSecret) {
-                    // 使用API Key获取用户
+                    // Get user with API Key
                     response = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(id)}&accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`);
                 } else if (token) {
-                    // 使用JWT获取用户
+                    // Get user with JWT
                     response = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(id)}`,
                         {
@@ -621,16 +621,16 @@ class AuthService {
                 }
             } catch (err) {
                 console.log(`Failed to get user with ID: ${id}`, err);
-                // 继续尝试下一个ID格式
+                // Continue trying next ID format
             }
         }
         
-        // 所有尝试都失败
+        // All attempts failed
         throw new Error(`User not found with any of these ID formats: ${possibleIds.join(', ')}`);
     }
 
     /**
-     * 通过 API Key 获取当前用户信息
+     * Get current user info with API Key
      */
     async getCurrentUserWithApiKey(apiKey: string, apiSecret: string): Promise<any> {
         try {
@@ -653,7 +653,7 @@ class AuthService {
     }
 
     /**
-     * 通过 JWT Token 获取当前用户信息
+     * Get current user info with JWT Token
      */
     async getCurrentUserWithToken(token: string): Promise<any> {
         try {
@@ -670,7 +670,7 @@ class AuthService {
     }
 
     /**
-     * 列出所有用户
+     * List all users
      */
     async listAllUsers(apiKey?: string, apiSecret?: string, token?: string): Promise<any[]> {
         try {
@@ -745,19 +745,19 @@ class AuthService {
             let headers = {};
             let completeUserInfo;
             
-            // 获取完整的用户信息，无论使用哪种认证方式
+            // Get complete user info regardless of auth method
             if (authToken) {
-                // 使用 JWT 获取用户信息
+                // Get user info with JWT
                 try {
-                    // 解析 JWT 令牌获取基本用户信息
+                    // Parse JWT token to get basic user info
                     const decodedToken = this.parseJwtToken(authToken);
                     console.log("JWT decoded successfully, payload:", JSON.stringify(decodedToken.payload).substring(0, 100) + "...");
                     
-                    // 从令牌中获取用户名和组织
+                    // Get username and organization from token
                     let userName = decodedToken.payload.name;
                     const userOwner = decodedToken.payload.owner || casdoorConfig.orgName;
                     
-                    // 如果没有找到 name，尝试使用 preferred_username 或 sub
+                    // If name not found, try using preferred_username or sub
                     if (!userName) {
                         userName = decodedToken.payload.preferred_username || decodedToken.payload.sub;
                         console.log(`Name not found in token, using alternative: ${userName}`);
@@ -767,11 +767,11 @@ class AuthService {
                         throw new Error("Could not determine username from JWT token");
                     }
                     
-                    // 构建完整的用户 ID
+                    // Build complete user ID
                     const fullId = `${userOwner}/${userName}`;
                     console.log(`Constructed user ID: ${fullId}`);
                     
-                    // 调用 Casdoor API 获取完整的用户对象
+                    // Call Casdoor API to get complete user object
                     const userResponse = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}`,
                         {
@@ -786,7 +786,7 @@ class AuthService {
                         completeUserInfo = userResponse.data.data;
                         console.log("Retrieved complete user info for JWT user");
                     } else {
-                        // 如果第一次尝试失败，使用 /api/get-account 端点
+                        // If first attempt fails, use /api/get-account endpoint
                         console.log("Failed to get user info directly, trying with /api/get-account");
                         const accountResponse = await axios.get(
                             `${casdoorConfig.endpoint}/api/get-account`,
@@ -802,7 +802,7 @@ class AuthService {
                             const accountInfo = accountResponse.data;
                             const accountUserId = `${accountInfo.data?.owner || casdoorConfig.orgName}/${accountInfo.name}`;
                             
-                            // 使用 account API 返回的用户 ID 获取完整用户信息
+                            // Get complete user info using user ID from account API
                             const secondUserResponse = await axios.get(
                                 `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(accountUserId)}`,
                                 {
@@ -829,9 +829,9 @@ class AuthService {
                     throw new Error("Failed to get user details required for API key generation");
                 }
             } else if (authApiKey && authApiSecret) {
-                // 使用 API Key 获取完整用户信息
+                // Get complete user info with API Key
                 try {
-                    // 先获取基本账户信息
+                    // Get basic account info first
                     const accountResponse = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
                     );
@@ -847,7 +847,7 @@ class AuthService {
                     
                     console.log(`Retrieved basic account info. Username: ${userName}, Owner: ${userOwner}`);
                     
-                    // 然后获取完整的用户对象
+                    // Then get complete user object
                     const userResponse = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}&accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
                     );
@@ -866,7 +866,7 @@ class AuthService {
             
             console.log("Complete user info retrieved:", JSON.stringify(completeUserInfo).substring(0, 200) + "...");
             
-            // 准备请求体 - 使用完整的用户对象
+            // Prepare request body with complete user object
             const requestBody = completeUserInfo;
             
             if (authToken) {
@@ -896,7 +896,7 @@ class AuthService {
                 throw new Error(response.data?.msg || "Failed to generate API keys");
             }
             
-            // 构建正确的用户ID用于获取更新后的用户信息
+            // Build correct user ID for fetching updated user info
             const userId = `${completeUserInfo.owner}/${completeUserInfo.name}`;
             
             console.log(`API keys generated successfully. Attempting to fetch updated user info for ${userId}`);

@@ -4,25 +4,25 @@ import { verifyTbaWebhook, skipTbaWebhookVerify } from "../middlewares/webhookAu
 
 const router = Router();
 
-// 使用验证的路由
+// Routes with verification
 router.post("/tba", verifyTbaWebhook, async (req: Request, res: Response) => {
     try {
         const { message_type, message_data } = req.body;
         console.log(`Processed TBA webhook: ${message_type}`, message_data);
 
-        // 处理不同类型的通知
+        // Handle different types of notifications
         switch (message_type) {
             case 'ping':
-                // 记录ping通知
+                // Log ping notification
                 console.log('Successfully received TBA ping notification:', message_data);
                 return success(res, { received: true }, `Received ping notification: ${message_data.title}`);
 
             case 'verification':
-                // 存储验证密钥
+                // Store verification key
                 const { verification_key } = message_data;
                 console.log('Successfully received TBA verification key:', verification_key);
 
-                // TODO: 在这里将验证密钥存储到数据库中，以便用户在管理界面验证webhook
+                // TODO: Store verification key in database to allow users to verify webhook in admin interface
 
                 return success(res, { received: true, verification_key }, 'Verification key received');
 
@@ -36,7 +36,7 @@ router.post("/tba", verifyTbaWebhook, async (req: Request, res: Response) => {
     }
 });
 
-// 测试用路由 - 不进行验证，用于开发测试
+// Test route - no verification, for development testing
 router.post("/tba-dev", skipTbaWebhookVerify, async (req: Request, res: Response) => {
     try {
         console.log('Received test webhook on /tba-dev endpoint');
@@ -49,13 +49,13 @@ router.post("/tba-dev", skipTbaWebhookVerify, async (req: Request, res: Response
 });
 
 /**
- * 获取TBA webhook验证状态
+ * Get TBA webhook verification status
  */
 router.get("/tba/status", (req: Request, res: Response) => {
     try {
-        // TODO: 从数据库获取webhook状态
+        // TODO: Fetch webhook status from database
 
-        // 暂时返回模拟数据
+        // Temporarily return mock data
         return success(res, {
             verified: false,
             lastPing: new Date().toISOString(),
