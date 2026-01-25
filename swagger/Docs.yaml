@@ -1317,20 +1317,33 @@ paths:
       description: Retrieve a list of all teams with their numbers and names
       tags:
         - Teams
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+          description: Optional maximum number of teams to return; omit to fetch all (capped at 1000 when provided)
+        - in: query
+          name: teamNumber
+          schema:
+            type: string
+          description: Exact match on team number
+        - in: query
+          name: teamName
+          schema:
+            type: string
+          description: Case-insensitive partial match on team name
       responses:
         '200':
           description: Teams retrieved successfully
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/TeamResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamResponse'
         '500':
           description: Server error
           content:
