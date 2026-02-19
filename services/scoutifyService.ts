@@ -14,7 +14,7 @@ interface BoundScoutifyUser {
 }
 
 class ScoutifyService {
-    private buildPagedQuery(baseSql: string, filters: QueryFilters, limit?: number, offset?: number) {
+    private buildPagedQuery(baseSql: string, filters: QueryFilters, orderBy: string, limit?: number, offset?: number) {
         const where: string[] = [];
         const params: Array<string | number> = [];
 
@@ -30,7 +30,7 @@ class ScoutifyService {
         const safeOffset = Math.max(Number(offset) || 0, 0);
 
         return {
-            sql: `${baseSql}${whereClause} LIMIT ? OFFSET ?`,
+            sql: `${baseSql}${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
             params: [...params, safeLimit, safeOffset],
         };
     }
@@ -143,11 +143,12 @@ class ScoutifyService {
                 gm_timestamp
              FROM game_matchup`,
             filters,
+            'gm_number ASC, gm_alliance ASC, gm_alliance_position ASC',
             limit,
             offset,
         );
 
-        const [rows]: any = await scoutifyPool.query(`${sql} ORDER BY gm_number ASC, gm_alliance ASC, gm_alliance_position ASC`, params);
+        const [rows]: any = await scoutifyPool.query(sql, params);
         return rows;
     }
 
@@ -168,14 +169,12 @@ class ScoutifyService {
                 gd_auton_path
              FROM game_details`,
             filters,
+            'game_matchup_gm_number ASC, game_matchup_gm_alliance ASC, game_matchup_gm_alliance_position ASC',
             limit,
             offset,
         );
 
-        const [rows]: any = await scoutifyPool.query(
-            `${sql} ORDER BY game_matchup_gm_number ASC, game_matchup_gm_alliance ASC, game_matchup_gm_alliance_position ASC`,
-            params,
-        );
+        const [rows]: any = await scoutifyPool.query(sql, params);
         return rows;
     }
 
@@ -200,11 +199,12 @@ class ScoutifyService {
                 user_tm_number
              FROM event_teams_user_assignment`,
             mergedFilters,
+            'sm_year DESC, cm_event_code ASC, tm_number ASC',
             limit,
             offset,
         );
 
-        const [rows]: any = await scoutifyPool.query(`${sql} ORDER BY sm_year DESC, cm_event_code ASC, tm_number ASC`, params);
+        const [rows]: any = await scoutifyPool.query(sql, params);
         return {
             boundUser,
             rows,
@@ -237,11 +237,12 @@ class ScoutifyService {
                 task_completed
              FROM event_task_tracker`,
             mergedFilters,
+            'sm_year DESC, cm_event_code ASC, gm_number ASC, task_id ASC',
             limit,
             offset,
         );
 
-        const [rows]: any = await scoutifyPool.query(`${sql} ORDER BY sm_year DESC, cm_event_code ASC, gm_number ASC, task_id ASC`, params);
+        const [rows]: any = await scoutifyPool.query(sql, params);
         return {
             boundUser,
             rows,

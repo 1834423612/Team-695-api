@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Team 695 API
   description: Team 695 API Documentation for multiple services including authentication, events, surveys, teams, uploads, and feedback
-  version: 1.2.6
+  version: 1.5.2
 servers:
   - url: https://api.team695.com
     description: Production server
