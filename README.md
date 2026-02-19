@@ -28,6 +28,7 @@ A comprehensive backend API service for FRC Team 695, providing authentication, 
 - 📊 **Survey System** - Collect and manage survey responses
 - 🖼️ **Image Upload** - Cloudflare R2 storage integration
 - 📈 **Team & Match Data** - Store and query FRC team and match information
+- 📱 **Scoutify Data Bridge** - Read Scoutify Android app data via a dedicated secondary database connection
 - 🔒 **Rate Limiting & Security** - Helmet.js, CORS, and request rate limiting
 - 📖 **API Documentation** - Swagger/OpenAPI documentation
 
@@ -92,6 +93,14 @@ DB_PORT=3306
 DB_USER=root
 DB_NAME=your_db_name
 DB_PASSWORD=your_secure_password
+
+# Scoutify secondary database (required for Scoutify endpoints)
+SCOUTIFY_DB_HOST=localhost
+SCOUTIFY_DB_PORT=3306
+SCOUTIFY_DB_USER=root
+SCOUTIFY_DB_NAME=teamsixn_scouting_dev
+SCOUTIFY_DB_PASSWORD=your_secure_password
+SCOUTIFY_DB_CONNECTION_LIMIT=50
 ```
 
 #### Email Configuration
@@ -316,6 +325,20 @@ The documentation provides:
 - `GET /api/team/:teamNumber` - Get team information
 - `GET /api/team-matches/:eventKey` - Get matches for event
 - `GET /api/event/:eventKey` - Get event details
+
+#### Scoutify
+- `GET /api/scoutify/user/me` - Get current Casdoor user to Scoutify binding
+- `GET /api/scoutify/user/me/android-device` - Get current user's `um_android_device_id`
+- `PATCH /api/scoutify/user/me/android-device` - Update current user's `um_android_device_id`
+- `GET /api/scoutify/game-matchups` - Query Scoutify `game_matchup`
+- `GET /api/scoutify/game-details` - Query Scoutify `game_details`
+- `GET /api/scoutify/event-assignments` - Query current user's `event_teams_user_assignment`
+- `GET /api/scoutify/event-tasks` - Query current user's `event_task_tracker`
+- `PATCH /api/scoutify/admin/users/:teamNumber/:scoutifyUserId/android-device` - Admin update/clear device ID
+- `POST|PUT|DELETE /api/scoutify/admin/game-details` - Admin create/update/delete game details
+- `POST|DELETE /api/scoutify/admin/event-assignments` - Admin create(delete via body key) assignments
+- `POST /api/scoutify/admin/event-tasks` - Admin create task
+- `PUT|DELETE /api/scoutify/admin/event-tasks/:taskId` - Admin update/delete task
 
 #### Webhooks
 - `POST /api/webhook` - TBA webhook receiver

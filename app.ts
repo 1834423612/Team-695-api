@@ -39,6 +39,7 @@ import assignmentRoutes from "./routes/assignmentRoutes"
 import { publicTeamMatchesRoutes, protectedTeamMatchesRoutes } from './routes/teamMatchesRoutes';
 import { verifyToken } from "./middlewares/auth"
 import apiInfoRoutes from "./routes/apiInfoRoutes"
+import scoutifyRoutes from "./routes/scoutifyRoutes"
 
 // Load Swagger configuration
 const swaggerFile = fs.readFileSync("./swagger/Docs.yaml", "utf8")
@@ -148,6 +149,7 @@ apiRouter.use("/survey", surveyRoutes)
 apiRouter.use("/upload", uploadRoutes)
 apiRouter.use("/assignments", assignmentRoutes)
 apiRouter.use("/team-matches", protectedTeamMatchesRoutes)
+apiRouter.use("/scoutify", scoutifyRoutes)
 
 // Only delete operations require authentication
 apiRouter.use("/upload/images", verifyToken);

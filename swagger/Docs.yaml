@@ -29,6 +29,8 @@ tags:
     description: APIs related to team matches and pit-scouting status
   - name: Info
     description: APIs for retrieving API information and status
+  - name: Scoutify
+    description: APIs for reading data from the Scoutify secondary database
 components:
   securitySchemes:
     bearerAuth:
@@ -1957,6 +1959,598 @@ paths:
                 $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/user/me:
+    get:
+      summary: Get current user Scoutify binding
+      description: Resolve the current authenticated Casdoor user against Scoutify user binding via user_master.um_casdoor_userid
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      responses:
+        '200':
+          description: Scoutify user binding retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/user/me/android-device:
+    get:
+      summary: Get current user Android device binding
+      description: Return the current user's Android device identifier from user_master.um_android_device_id
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      responses:
+        '200':
+          description: Android device binding retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    patch:
+      summary: Update current user Android device binding
+      description: Update the current bound Scoutify user's user_master.um_android_device_id
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - androidDeviceId
+              properties:
+                androidDeviceId:
+                  type: string
+      responses:
+        '200':
+          description: Android device binding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/game-matchups:
+    get:
+      summary: Query Scoutify game matchups
+      description: Read records from Scoutify game_matchup table with optional filters and pagination
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: query
+          name: smYear
+          schema:
+            type: integer
+        - in: query
+          name: eventCode
+          schema:
+            type: string
+        - in: query
+          name: gameType
+          schema:
+            type: string
+        - in: query
+          name: gameNumber
+          schema:
+            type: integer
+        - in: query
+          name: alliance
+          schema:
+            type: string
+        - in: query
+          name: alliancePosition
+          schema:
+            type: integer
+        - in: query
+          name: teamNumber
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Game matchup records retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/game-details:
+    get:
+      summary: Query Scoutify game details
+      description: Read records from Scoutify game_details table with optional filters and pagination
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: query
+          name: smYear
+          schema:
+            type: integer
+        - in: query
+          name: eventCode
+          schema:
+            type: string
+        - in: query
+          name: gameType
+          schema:
+            type: string
+        - in: query
+          name: gameNumber
+          schema:
+            type: integer
+        - in: query
+          name: alliance
+          schema:
+            type: string
+        - in: query
+          name: alliancePosition
+          schema:
+            type: integer
+        - in: query
+          name: elementGroupKey
+          schema:
+            type: integer
+        - in: query
+          name: elementKey
+          schema:
+            type: integer
+        - in: query
+          name: scoutifyUserId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Game detail records retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/event-assignments:
+    get:
+      summary: Query current user event assignments
+      description: Read records from event_teams_user_assignment for the current bound Scoutify user
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: query
+          name: smYear
+          schema:
+            type: integer
+        - in: query
+          name: eventCode
+          schema:
+            type: string
+        - in: query
+          name: teamNumber
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Assignment records retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/event-tasks:
+    get:
+      summary: Query current user event tasks
+      description: Read records from event_task_tracker for the current bound Scoutify user
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: query
+          name: smYear
+          schema:
+            type: integer
+        - in: query
+          name: eventCode
+          schema:
+            type: string
+        - in: query
+          name: teamNumber
+          schema:
+            type: integer
+        - in: query
+          name: gameNumber
+          schema:
+            type: integer
+        - in: query
+          name: gameType
+          schema:
+            type: string
+        - in: query
+          name: checkinTask
+          schema:
+            type: string
+        - in: query
+          name: taskCompleted
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Event task records retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/admin/users/{teamNumber}/{scoutifyUserId}/android-device:
+    patch:
+      summary: Admin update Android device binding
+      description: Admin-only endpoint to update or clear a Scoutify user's user_master.um_android_device_id
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: path
+          name: teamNumber
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: scoutifyUserId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                androidDeviceId:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Android device binding updated by admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Scoutify user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/admin/game-details:
+    post:
+      summary: Admin create game detail
+      description: Admin-only endpoint to create game_details rows
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Game detail created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      summary: Admin update game detail
+      description: Admin-only endpoint to update game_details rows
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Game detail updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      summary: Admin delete game detail
+      description: Admin-only endpoint to delete game_details rows
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Game detail deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/admin/event-assignments:
+    post:
+      summary: Admin create or update event assignment
+      description: Admin-only endpoint to create event_teams_user_assignment rows (upsert behavior)
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Event assignment created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      summary: Admin delete event assignment
+      description: Admin-only endpoint to delete event_teams_user_assignment rows
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Event assignment deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/admin/event-tasks:
+    post:
+      summary: Admin create event task
+      description: Admin-only endpoint to create event_task_tracker rows
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Event task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /scoutify/admin/event-tasks/{taskId}:
+    put:
+      summary: Admin update event task
+      description: Admin-only endpoint to update event_task_tracker rows by task_id
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      summary: Admin delete event task
+      description: Admin-only endpoint to delete event_task_tracker rows by task_id
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event task deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin privileges required
           content:
             application/json:
               schema:
