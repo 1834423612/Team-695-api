@@ -1,8 +1,11 @@
 import { Router } from "express"
 import authController from "../controllers/authController"
 import { verifyToken, requireAdmin } from "../middlewares/auth"
+import { authPerMinuteLimiter, authPerSecondLimiter } from "../middlewares/rateLimiter"
 
 const router = Router()
+
+router.use(authPerSecondLimiter, authPerMinuteLimiter)
 
 // Public routes
 router.post("/callback", authController.handleCallback)

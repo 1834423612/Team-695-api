@@ -2072,13 +2072,41 @@ paths:
   /scoutify/game-matchups:
     get:
       summary: Query Scoutify game matchups
-      description: Read records from Scoutify game_matchup table with optional filters and pagination
+      description: Read records from Scoutify game_matchup table with optional filters and pagination. This is a public read-only endpoint.
       tags:
         - Scoutify
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
+      responses:
+        '200':
+          description: Game matchup records retrieved
+          headers:
+            RateLimit-Limit:
+              description: Configured request limit for current rate-limit window
+              schema:
+                type: string
+            RateLimit-Remaining:
+              description: Remaining requests in current rate-limit window
+              schema:
+                type: string
+            RateLimit-Reset:
+              description: Seconds until current rate-limit window resets
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
       parameters:
         - in: query
           name: smYear
@@ -2118,9 +2146,35 @@ paths:
           schema:
             type: integer
             default: 0
+
+  /scoutify/game-details:
+    get:
+      summary: Query Scoutify game details
+      description: Read records from Scoutify game_details table with optional filters and pagination. This is a public read-only endpoint.
+      tags:
+        - Scoutify
       responses:
         '200':
-          description: Game matchup records retrieved
+          description: Game detail records retrieved
+          headers:
+            RateLimit-Limit:
+              description: Configured request limit for current rate-limit window
+              schema:
+                type: string
+            RateLimit-Remaining:
+              description: Remaining requests in current rate-limit window
+              schema:
+                type: string
+            RateLimit-Reset:
+              description: Seconds until current rate-limit window resets
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '429':
+          description: Too many requests
           content:
             application/json:
               schema:
@@ -2131,17 +2185,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-
-  /scoutify/game-details:
-    get:
-      summary: Query Scoutify game details
-      description: Read records from Scoutify game_details table with optional filters and pagination
-      tags:
-        - Scoutify
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
       parameters:
         - in: query
           name: smYear
@@ -2189,19 +2232,6 @@ paths:
           schema:
             type: integer
             default: 0
-      responses:
-        '200':
-          description: Game detail records retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
 
   /scoutify/event-assignments:
     get:
@@ -2561,15 +2591,22 @@ paths:
       description: Retrieve a list of all available API endpoints with their details
       tags:
         - Info
-      parameters:
-        - in: query
-          name: tag
-          schema:
-            type: string
-          description: Filter endpoints by tag
       responses:
         '200':
           description: Endpoints retrieved successfully
+          headers:
+            ETag:
+              description: ETag of current swagger structure
+              schema:
+                type: string
+            Last-Modified:
+              description: Last modified timestamp of swagger structure
+              schema:
+                type: string
+            Cache-Control:
+              description: HTTP cache control policy
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -2593,6 +2630,79 @@ paths:
                           lastUpdated:
                             type: string
                             format: date-time
+        '304':
+          description: Not modified, use cached response
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /info/endpoints/by-tag/{tag}:
+    get:
+      summary: Get API endpoints by tag
+      description: Retrieve API endpoints filtered by a specific Swagger tag
+      tags:
+        - Info
+      parameters:
+        - in: path
+          name: tag
+          required: true
+          schema:
+            type: string
+          description: Tag name used to filter endpoints
+      responses:
+        '200':
+          description: Endpoints for the tag retrieved successfully
+          headers:
+            ETag:
+              description: ETag of current swagger structure
+              schema:
+                type: string
+            Last-Modified:
+              description: Last modified timestamp of swagger structure
+              schema:
+                type: string
+            Cache-Control:
+              description: HTTP cache control policy
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tag:
+                            type: string
+                          total:
+                            type: integer
+                          endpoints:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/EndpointInfo'
+                          lastUpdated:
+                            type: string
+                            format: date-time
+        '304':
+          description: Not modified, use cached response
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
@@ -2609,6 +2719,19 @@ paths:
       responses:
         '200':
           description: API information retrieved successfully
+          headers:
+            ETag:
+              description: ETag of current swagger structure
+              schema:
+                type: string
+            Last-Modified:
+              description: Last modified timestamp of swagger structure
+              schema:
+                type: string
+            Cache-Control:
+              description: HTTP cache control policy
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -2618,6 +2741,14 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/ApiInfo'
+        '304':
+          description: Not modified, use cached response
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:
@@ -2643,6 +2774,12 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/ServiceStatus'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
         '500':
           description: Server error
           content:

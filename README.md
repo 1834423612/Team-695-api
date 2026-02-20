@@ -153,6 +153,17 @@ SKIP_TBA_HMAC_VERIFY=false
 #### Server Configuration
 ```env
 PORT=3000
+
+# QoS / Rate limit overrides (optional)
+# If omitted, defaults from config/qos.ts are used
+QOS_API_PER_SECOND=30
+QOS_API_PER_MINUTE=900
+QOS_AUTH_PER_SECOND=8
+QOS_AUTH_PER_MINUTE=120
+QOS_FEEDBACK_PER_SECOND=2
+QOS_FEEDBACK_PER_MINUTE=30
+QOS_SCOUTIFY_PUBLIC_PER_SECOND=12
+QOS_SCOUTIFY_PUBLIC_PER_MINUTE=300
 ```
 
 ### Database Setup
@@ -486,9 +497,10 @@ The documentation provides:
 **Purpose**: Prevent API abuse
 
 **Configuration**:
-- Window: 15 minutes
-- Max requests per window
-- IP-based tracking
+- Two-layer QoS (per-second + per-minute)
+- Default thresholds in `config/qos.ts`
+- Optional `.env` overrides via `QOS_*` variables
+- IP-based tracking with standard `RateLimit-*` headers
 
 ## Development
 

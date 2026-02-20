@@ -40,6 +40,7 @@ import { publicTeamMatchesRoutes, protectedTeamMatchesRoutes } from './routes/te
 import { verifyToken } from "./middlewares/auth"
 import apiInfoRoutes from "./routes/apiInfoRoutes"
 import scoutifyRoutes from "./routes/scoutifyRoutes"
+import { apiPerMinuteLimiter, apiPerSecondLimiter } from "./middlewares/rateLimiter"
 
 // Load Swagger configuration
 const swaggerFile = fs.readFileSync("./swagger/Docs.yaml", "utf8")
@@ -137,6 +138,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: tr
 
 // API Endpoint routes
 const apiRouter = express.Router()
+apiRouter.use(apiPerSecondLimiter, apiPerMinuteLimiter)
 
 // Public routes - no authentication required
 apiRouter.use("/auth", authRoutes)
