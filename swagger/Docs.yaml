@@ -1,14 +1,15 @@
 openapi: 3.0.0
 info:
   title: Team 695 API
-  description: Team 695 API Documentation for multiple services including authentication, events, surveys, teams, uploads, and feedback
+  description: Team 695 API Documentation for multiple services including
+    authentication, events, surveys, teams, uploads, and feedback
   version: 1.5.6
 servers:
   - url: https://api.team695.com
     description: Production server
   - url: http://localhost:3000/api
     description: Development server
-tags: 
+tags:
   - name: Auth
     description: APIs related to authentication and authorization
   - name: Events
@@ -31,6 +32,629 @@ tags:
     description: APIs for retrieving API information and status
   - name: Scoutify
     description: APIs for reading data from the Scoutify secondary database
+x-error-catalog:
+  global:
+    invalidJsonPayload:
+      status: 400
+      message: Invalid JSON payload
+      appliesTo:
+        - POST endpoints with application/json body
+        - PUT endpoints with application/json body
+        - PATCH endpoints with application/json body
+    authMiddleware401:
+      status: 401
+      messages:
+        - No authentication token provided
+        - Token has been revoked
+        - Token is invalid or has been revoked
+        - Token has expired
+        - Token validation failed
+        - Failed to verify token
+    requireAdmin:
+      statusCodes:
+        - 401
+        - 403
+        - 500
+      messages:
+        "401":
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "500":
+          - Failed to verify admin privileges
+    rateLimit:
+      status: 429
+      messages:
+        api:
+          - Too many requests per second, please slow down.
+          - Too many requests per minute, please try again later.
+        auth:
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        feedback:
+          - Too many feedback submissions per second.
+          - Too many feedback submissions per minute.
+        scoutifyPublic:
+          - Too many Scoutify query requests per second.
+          - Too many Scoutify query requests per minute.
+  endpoints:
+    /auth/callback:
+      post:
+        "400":
+          - Authorization code required
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Authentication failed
+    /auth/user-info:
+      get:
+        "400":
+          - Token required
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to proxy to Casdoor
+          - Failed to get user information
+    /auth/me:
+      get:
+        "401":
+          - Please provide a valid JWT token or API Key/Secret
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to proxy to Casdoor
+          - Failed to get user information
+    /auth/validate:
+      get:
+        "401":
+          - Authentication required
+          - Token/API Key is no longer valid
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to validate token
+    /auth/refresh-token:
+      post:
+        "400":
+          - Refresh token required
+          - Invalid JSON payload
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to refresh token
+    /auth/logout:
+      post:
+        "400":
+          - Token required
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+    /auth/revoke-token:
+      post:
+        "400":
+          - Token required
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to revoke token
+          - Failed to verify admin privileges
+    /auth/users:
+      get:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to retrieve users
+          - Failed to verify admin privileges
+    /auth/api-keys:
+      post:
+        "400":
+          - No valid authentication provided
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "429":
+          - Too many authentication attempts per second.
+          - Too many authentication attempts per minute.
+        "500":
+          - Failed to generate API keys
+          - Failed to generate API keys: <upstream error>
+    /feedback:
+      post:
+        "429":
+          - Too many feedback submissions per second.
+          - Too many feedback submissions per minute.
+        "500":
+          - Database insertion error
+    /upload/upload:
+      post:
+        "400":
+          - No file uploaded
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "404":
+          - Event not found
+        "500":
+          - Failed to upload image
+    /upload/images/{imageId}:
+      delete:
+        "401":
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "404":
+          - Image not found
+          - Image not found in the specified type
+        "500":
+          - Failed to verify admin privileges
+          - Failed to delete image
+    /event/event-id:
+      get:
+        "404":
+          - Event not found
+        "500":
+          - Failed to fetch event ID
+    /team/teams:
+      get:
+        "500":
+          - Failed to fetch teams
+    /survey/submit:
+      post:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "500":
+          - Failed to submit survey
+    /survey/query:
+      get:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "500":
+          - Failed to query survey responses
+    /webhook/tba:
+      post:
+        "401":
+          - Missing X-TBA-HMAC header
+          - Invalid X-TBA-HMAC signature
+        "500":
+          - Server configuration error
+          - Error verifying webhook signature
+          - Error processing webhook
+    /webhook/tba/status:
+      get:
+        "500":
+          - Error getting webhook status
+    /assignments:
+      post:
+        "400":
+          - Missing required fields or no assignees specified
+          - Team numbers are required for pit-scouting tasks
+          - Alliance and matches are required for scouting tasks
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "500":
+          - Failed to create assignment
+          - Error creating assignment
+          - Failed to verify admin privileges
+    /assignments/{id}:
+      put:
+        "400":
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "404":
+          - Assignment not found or no changes applied
+        "500":
+          - Error updating assignment
+          - Failed to verify admin privileges
+      delete:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "404":
+          - Assignment not found
+        "500":
+          - Error deleting assignment
+          - Failed to verify admin privileges
+    /assignments/events/{eventKey}:
+      get:
+        "400":
+          - Event key is required
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "403":
+          - Admin privileges required
+        "500":
+          - Error getting event assignments
+          - Failed to verify admin privileges
+    /assignments/user/{eventKey}:
+      get:
+        "400":
+          - Event key is required
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+          - Authentication required
+        "500":
+          - Error getting user assignments
+    /team-matches/event/{eventKey}:
+      get:
+        "400":
+          - Event key is required
+        "500":
+          - Error getting teams for event
+    /team-matches/pit-status/{eventKey}/{teamKey}:
+      put:
+        "400":
+          - Event key and team key are required
+          - is_pit status is required
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "404":
+          - Team not found for this event (using team key: <value>)
+        "500":
+          - Error updating pit-scouting status
+    /team-matches/pit-status/{eventKey}/{teamNumber}:
+      put:
+        "400":
+          - Event key and team number are required
+          - is_pit status is required
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "404":
+          - Team not found for this event (using team number: <value>)
+        "500":
+          - Error updating pit-scouting status
+    /scoutify/user/me:
+      get:
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to get Scoutify user binding
+    /scoutify/user/me/android-device:
+      get:
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to get Android device binding
+      patch:
+        "400":
+          - androidDeviceId is required
+          - Invalid JSON payload
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to update Android device binding
+    /scoutify/game-matchups:
+      get:
+        "429":
+          - Too many Scoutify query requests per second.
+          - Too many Scoutify query requests per minute.
+        "500":
+          - Failed to query game matchups
+    /scoutify/game-details:
+      get:
+        "429":
+          - Too many Scoutify query requests per second.
+          - Too many Scoutify query requests per minute.
+        "500":
+          - Failed to query game details
+    /scoutify/game-comments:
+      get:
+        "429":
+          - Too many Scoutify query requests per second.
+          - Too many Scoutify query requests per minute.
+        "500":
+          - Failed to query game comments
+      post:
+        "400":
+          - Missing required fields for game comment
+          - Invalid numeric fields for game comment
+          - gc_comment is required
+          - gc_comment must be 200 characters or fewer after sanitization
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to create game comment
+    /scoutify/event-assignments:
+      get:
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to query event assignments
+    /scoutify/event-tasks:
+      get:
+        "404":
+          - No Scoutify user binding found for current Casdoor user
+        "500":
+          - Failed to query event tasks
+    /scoutify/admin/users/{teamNumber}/{scoutifyUserId}/android-device:
+      patch:
+        "400":
+          - teamNumber and scoutifyUserId are required
+          - androidDeviceId must be a string or null
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - Scoutify user not found
+        "500":
+          - Failed to update Android device binding
+          - Failed to verify admin privileges
+    /scoutify/admin/game-details:
+      post:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "500":
+          - Failed to create game detail
+          - Failed to verify admin privileges
+      put:
+        "400":
+          - match and changes are required
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - No game detail row updated
+        "500":
+          - Failed to update game detail
+          - Failed to verify admin privileges
+      delete:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - No game detail row deleted
+        "500":
+          - Failed to delete game detail
+          - Failed to verify admin privileges
+    /scoutify/admin/event-assignments:
+      post:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "500":
+          - Failed to create event assignment
+          - Failed to verify admin privileges
+      delete:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - No event assignment row deleted
+        "500":
+          - Failed to delete event assignment
+          - Failed to verify admin privileges
+    /scoutify/admin/event-tasks:
+      post:
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "500":
+          - Failed to create event task
+          - Failed to verify admin privileges
+    /scoutify/admin/event-tasks/{taskId}:
+      put:
+        "400":
+          - taskId is required
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - No event task row updated
+        "500":
+          - Failed to update event task
+          - Failed to verify admin privileges
+      delete:
+        "400":
+          - taskId is required
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - No event task row deleted
+        "500":
+          - Failed to delete event task
+          - Failed to verify admin privileges
+    /info/endpoints:
+      get:
+        "429":
+          - Too many requests per second, please slow down.
+          - Too many requests per minute, please try again later.
+        "500":
+          - Failed to retrieve API endpoints
+    /info/endpoints/by-tag/{tag}:
+      get:
+        "429":
+          - Too many requests per second, please slow down.
+          - Too many requests per minute, please try again later.
+        "500":
+          - Failed to retrieve API endpoints by tag
+    /info/api-info:
+      get:
+        "429":
+          - Too many requests per second, please slow down.
+          - Too many requests per minute, please try again later.
+        "500":
+          - Failed to retrieve API information
+    /info/status:
+      get:
+        "429":
+          - Too many requests per second, please slow down.
+          - Too many requests per minute, please try again later.
+        "500":
+          - Failed to retrieve status
 components:
   securitySchemes:
     bearerAuth:
@@ -63,6 +687,26 @@ components:
         error:
           type: string
           description: Error details (only in non-production environments)
+    ApiErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          enum:
+            - false
+          description: Always false for error responses
+        message:
+          type: string
+          description: Error message
+        error:
+          type: string
+          description: Error details (only in non-production environments)
+      example:
+        success: false
+        message: Unauthorized
     TokenResponse:
       type: object
       properties:
@@ -123,7 +767,7 @@ components:
               type: string
               description: Token type
         payload:
-          $ref: '#/components/schemas/UserInfo'
+          $ref: "#/components/schemas/UserInfo"
         signature:
           type: string
           description: Token signature
@@ -208,11 +852,11 @@ components:
             fullRobotImages:
               type: array
               items:
-                $ref: '#/components/schemas/ImageData'
+                $ref: "#/components/schemas/ImageData"
             driveTrainImages:
               type: array
               items:
-                $ref: '#/components/schemas/ImageData'
+                $ref: "#/components/schemas/ImageData"
         userData:
           type: object
           properties:
@@ -277,7 +921,9 @@ components:
         message_type:
           type: string
           description: Type of TBA notification
-          enum: [ping, verification]
+          enum:
+            - ping
+            - verification
         message_data:
           type: object
           properties:
@@ -302,7 +948,10 @@ components:
           description: Timestamp of the last ping received
         status:
           type: string
-          enum: [active, inactive, pending]
+          enum:
+            - active
+            - inactive
+            - pending
           description: Current status of the webhook
     CreateAssignmentRequest:
       type: object
@@ -312,7 +961,9 @@ components:
           description: Event key (e.g. 2025ohcl)
         task_type:
           type: string
-          enum: [scouting, pit-scouting]
+          enum:
+            - scouting
+            - pit-scouting
           description: Type of scouting task
         assigned_team_numbers:
           type: array
@@ -321,7 +972,9 @@ components:
           description: List of team numbers for pit-scouting
         assigned_alliance:
           type: string
-          enum: [red, blue]
+          enum:
+            - red
+            - blue
           description: Alliance color for scouting
         assigned_matches:
           type: string
@@ -329,7 +982,7 @@ components:
         assignees_data:
           type: array
           items:
-            $ref: '#/components/schemas/UserData'
+            $ref: "#/components/schemas/UserData"
           description: List of users assigned to this task
         notes:
           type: string
@@ -348,7 +1001,9 @@ components:
           description: List of team numbers for pit-scouting
         assigned_alliance:
           type: string
-          enum: [red, blue]
+          enum:
+            - red
+            - blue
           description: Alliance color for scouting
         assigned_matches:
           type: string
@@ -356,11 +1011,15 @@ components:
         assignees_data:
           type: array
           items:
-            $ref: '#/components/schemas/UserData'
+            $ref: "#/components/schemas/UserData"
           description: List of users assigned to this task
         status:
           type: string
-          enum: [pending, in_progress, completed, canceled]
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - canceled
           description: Current status of the assignment
         notes:
           type: string
@@ -376,7 +1035,9 @@ components:
           description: Event key (e.g. 2025ohcl)
         task_type:
           type: string
-          enum: [scouting, pit-scouting]
+          enum:
+            - scouting
+            - pit-scouting
           description: Type of scouting task
         assigned_team_numbers:
           type: array
@@ -385,21 +1046,27 @@ components:
           description: List of team numbers for pit-scouting
         assigned_alliance:
           type: string
-          enum: [red, blue]
+          enum:
+            - red
+            - blue
           description: Alliance color for scouting
         assigned_matches:
           type: string
           description: Range of matches for scouting (e.g. Q3-Q12)
         assigner_data:
-          $ref: '#/components/schemas/UserData'
+          $ref: "#/components/schemas/UserData"
         assignees_data:
           type: array
           items:
-            $ref: '#/components/schemas/UserData'
+            $ref: "#/components/schemas/UserData"
           description: List of users assigned to this task
         status:
           type: string
-          enum: [pending, in_progress, completed, canceled]
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - canceled
           description: Current status of the assignment
         notes:
           type: string
@@ -507,7 +1174,6 @@ components:
           type: array
           items:
             type: string
-            
     ApiInfo:
       type: object
       properties:
@@ -610,7 +1276,6 @@ components:
         lastUpdated:
           type: string
           format: date-time
-          
     ServiceStatus:
       type: object
       properties:
@@ -619,7 +1284,10 @@ components:
           description: Service name
         status:
           type: string
-          enum: [operational, degraded, down]
+          enum:
+            - operational
+            - degraded
+            - down
           description: Current service status
         timestamp:
           type: string
@@ -649,12 +1317,12 @@ components:
               type: string
             endpoints:
               type: string
-
 paths:
   /auth/callback:
     post:
       summary: Exchange authorization code for access token
-      description: Process the authorization code returned from Casdoor and exchange it for an access token
+      description: Process the authorization code returned from Casdoor and exchange
+        it for an access token
       tags:
         - Auth
       parameters:
@@ -665,30 +1333,39 @@ paths:
             type: string
           description: Authorization code returned from Casdoor
       responses:
-        '200':
+        "200":
           description: Successfully exchanged code for token
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TokenResponse'
-        '400':
+                        $ref: "#/components/schemas/TokenResponse"
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/user-info:
     get:
       summary: Decode JWT token and return user info
@@ -703,37 +1380,51 @@ paths:
             type: string
           description: JWT Token to decode
       responses:
-        '200':
+        "200":
           description: User information decoded from the token
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/DecodedToken'
-        '400':
+                        $ref: "#/components/schemas/DecodedToken"
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/me:
     get:
       summary: Get current user info (Local validation only)
-      description: |
-        Retrieves the current user's information using the provided JWT token or API Key.
-        Note: This endpoint only performs local JWT validation and does not verify with the Casdoor server if the token has been revoked.
-        For security-critical operations, use `/auth/validate` to verify token validity with the server.
+      description: >
+        Retrieves the current user's information using the provided JWT token or
+        API Key.
+
+        Note: This endpoint only performs local JWT validation and does not
+        verify with the Casdoor server if the token has been revoked.
+
+        For security-critical operations, use `/auth/validate` to verify token
+        validity with the server.
       tags:
         - Auth
       security:
@@ -747,37 +1438,52 @@ paths:
             type: string
           description: JWT Token (optional, if not provided in Authorization header)
       responses:
-        '200':
-          description: User information retrieved successfully (based on local validation only)
+        "200":
+          description: User information retrieved successfully (based on local validation
+            only)
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/UserInfo'
-        '401':
+                        $ref: "#/components/schemas/UserInfo"
+        "401":
           description: Unauthorized - Token format is invalid or missing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/validate:
     get:
       summary: Validate JWT token or API Key with server
-      description: |
-        Performs a complete validation of the provided JWT token or API Key by verifying with the Casdoor server.
-        This endpoint checks if the token has been revoked, is still active, and returns its admin status.
-        Use this endpoint for security-critical operations requiring full token validation.
+      description: >
+        Performs a complete validation of the provided JWT token or API Key by
+        verifying with the Casdoor server.
+
+        This endpoint checks if the token has been revoked, is still active, and
+        returns its admin status.
+
+        Use this endpoint for security-critical operations requiring full token
+        validation.
       tags:
         - Auth
       security:
@@ -797,13 +1503,13 @@ paths:
             default: false
           description: Force verification with server, bypassing cached results
       responses:
-        '200':
+        "200":
           description: Token is valid according to server verification
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -815,23 +1521,34 @@ paths:
                             type: boolean
                           tokenStatus:
                             type: string
-                            enum: [active]
+                            enum:
+                              - active
                           fromCache:
                             type: boolean
                             description: Indicates if the result came from cache
-        '401':
-          description: Unauthorized - Token is invalid, expired, or has been revoked on the server
+        "401":
+          description: Unauthorized - Token is invalid, expired, or has been revoked on
+            the server
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/refresh-token:
     post:
       summary: Refresh access token
@@ -843,36 +1560,46 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
+              $ref: "#/components/schemas/RefreshTokenRequest"
       responses:
-        '200':
+        "200":
           description: Token refreshed successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TokenResponse'
-        '400':
+                        $ref: "#/components/schemas/TokenResponse"
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/logout:
     post:
       summary: Logout user
-      description: Revokes the current token by calling both Casdoor logout and delete-token endpoints, and adds it to the local blacklist
+      description: Revokes the current token by calling both Casdoor logout and
+        delete-token endpoints, and adds it to the local blacklist
       tags:
         - Auth
       security:
@@ -880,13 +1607,13 @@ paths:
         - apiKeyAuth: []
           apiSecretAuth: []
       responses:
-        '200':
+        "200":
           description: Logged out successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -894,7 +1621,7 @@ paths:
                         properties:
                           message:
                             type: string
-                            example: "Logged out successfully"
+                            example: Logged out successfully
                           details:
                             type: object
                             properties:
@@ -904,19 +1631,28 @@ paths:
                                 type: boolean
                               casdoorDeleteToken:
                                 type: boolean
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/revoke-token:
     post:
       summary: Revoke a specific token (Admin only)
@@ -940,13 +1676,13 @@ paths:
                   type: string
                   description: The token to revoke
       responses:
-        '200':
+        "200":
           description: Token revoked successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -954,7 +1690,7 @@ paths:
                         properties:
                           message:
                             type: string
-                            example: "Token revoked successfully"
+                            example: Token revoked successfully
                           details:
                             type: object
                             properties:
@@ -964,31 +1700,50 @@ paths:
                                 type: boolean
                               casdoorDeleteToken:
                                 type: boolean
-        '400':
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/users:
     get:
       summary: Get all users in organization (admin only)
@@ -1021,16 +1776,18 @@ paths:
           name: sortOrder
           schema:
             type: string
-            enum: [asc, desc]
+            enum:
+              - asc
+              - desc
           description: Sort order
       responses:
-        '200':
+        "200":
           description: Users retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1039,41 +1796,65 @@ paths:
                           data:
                             type: array
                             items:
-                              $ref: '#/components/schemas/UserInfo'
+                              $ref: "#/components/schemas/UserInfo"
                           total:
                             type: integer
-        '400':
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /auth/api-keys:
     post:
       summary: Generate API access keys
-      description: |
+      description: >
         Generates new API access key and secret for the authenticated user.
-        - Authentication is done using the headers (X-API-Key and X-API-Secret or Bearer token)
-        - The authenticated user's identity is used to determine which user to generate keys for
+
+        - Authentication is done using the headers (X-API-Key and X-API-Secret
+        or Bearer token)
+
+        - The authenticated user's identity is used to determine which user to
+        generate keys for
+
         - API keys are generated by the Casdoor server
       tags:
         - Auth
@@ -1082,13 +1863,13 @@ paths:
         - apiKeyAuth: []
           apiSecretAuth: []
       responses:
-        '200':
+        "200":
           description: API keys generated successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1105,32 +1886,51 @@ paths:
                             description: User ID the keys were generated for
                           message:
                             type: string
-                            example: "API Keys generated successfully"
-        '400':
+                            example: API Keys generated successfully
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Non-admin trying to generate keys for another user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /feedback:
     post:
       summary: Submit feedback
@@ -1142,15 +1942,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FeedbackRequest'
+              $ref: "#/components/schemas/FeedbackRequest"
       responses:
-        '201':
+        "201":
           description: Feedback submitted successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1158,19 +1958,28 @@ paths:
                         properties:
                           message:
                             type: string
-        '429':
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /upload/upload:
     post:
       summary: Upload a file
@@ -1195,42 +2004,61 @@ paths:
                   type: string
                   description: Type of upload (e.g., 'robots', 'drivetrain')
       responses:
-        '200':
+        "200":
           description: File uploaded successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/UploadResponse'
-        '400':
+                        $ref: "#/components/schemas/UploadResponse"
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "404":
           description: Event not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /upload/images/{imageId}:
     delete:
       summary: Delete an image
@@ -1249,13 +2077,13 @@ paths:
             type: string
           description: ID of the image to delete
       responses:
-        '200':
+        "200":
           description: Image deleted successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1263,25 +2091,39 @@ paths:
                         properties:
                           message:
                             type: string
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "404":
           description: Image not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /event/event-id:
     get:
       summary: Get current event ID
@@ -1289,30 +2131,39 @@ paths:
       tags:
         - Events
       responses:
-        '200':
+        "200":
           description: Event ID retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/EventResponse'
-        '404':
+                        $ref: "#/components/schemas/EventResponse"
+        "404":
           description: Event not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /team/teams:
     get:
       summary: Get list of teams
@@ -1326,7 +2177,8 @@ paths:
             type: integer
             minimum: 1
             maximum: 1000
-          description: Optional maximum number of teams to return; omit to fetch all (capped at 1000 when provided)
+          description: Optional maximum number of teams to return; omit to fetch all
+            (capped at 1000 when provided)
         - in: query
           name: teamNumber
           schema:
@@ -1338,21 +2190,25 @@ paths:
             type: string
           description: Case-insensitive partial match on team name
       responses:
-        '200':
+        "200":
           description: Teams retrieved successfully
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TeamResponse'
-        '500':
+                  $ref: "#/components/schemas/TeamResponse"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /survey/submit:
     post:
       summary: Submit survey response
@@ -1368,15 +2224,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SurveySubmissionRequest'
+              $ref: "#/components/schemas/SurveySubmissionRequest"
       responses:
-        '200':
+        "200":
           description: Survey submitted successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1384,19 +2240,28 @@ paths:
                         properties:
                           message:
                             type: string
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /survey/query:
     get:
       summary: Query survey responses
@@ -1424,32 +2289,41 @@ paths:
             type: string
           description: Filter by team number
       responses:
-        '200':
+        "200":
           description: Survey responses retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/SurveyResponse'
-        '401':
+                          $ref: "#/components/schemas/SurveyResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /webhook/tba:
     post:
       summary: Receive TBA webhook notifications
@@ -1461,15 +2335,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WebhookTbaRequest'
+              $ref: "#/components/schemas/WebhookTbaRequest"
       responses:
-        '200':
+        "200":
           description: Notification received successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1480,19 +2354,28 @@ paths:
                           verification_key:
                             type: string
                             description: Only present for verification messages
-        '401':
+        "401":
           description: Unauthorized - Invalid HMAC signature
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-  
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /webhook/tba/status:
     get:
       summary: Get TBA webhook status
@@ -1500,24 +2383,28 @@ paths:
       tags:
         - Webhooks
       responses:
-        '200':
+        "200":
           description: Webhook status retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/WebhookStatus'
-        '500':
+                        $ref: "#/components/schemas/WebhookStatus"
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /assignments:
     post:
       summary: Create a new task assignment
@@ -1533,44 +2420,63 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAssignmentRequest'
+              $ref: "#/components/schemas/CreateAssignmentRequest"
       responses:
-        '200':
+        "200":
           description: Assignment created successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TaskAssignment'
-        '400':
+                        $ref: "#/components/schemas/TaskAssignment"
+        "400":
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /assignments/{id}:
     put:
       summary: Update a task assignment
@@ -1593,43 +2499,63 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateAssignmentRequest'
+              $ref: "#/components/schemas/UpdateAssignmentRequest"
       responses:
-        '200':
+        "200":
           description: Assignment updated successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TaskAssignment'
-        '401':
+                        $ref: "#/components/schemas/TaskAssignment"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
           description: Assignment not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     delete:
       summary: Delete a task assignment
       description: Delete an existing task assignment (admin only)
@@ -1647,13 +2573,13 @@ paths:
             type: integer
           description: Task assignment ID
       responses:
-        '200':
+        "200":
           description: Assignment deleted successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -1661,31 +2587,50 @@ paths:
                         properties:
                           deleted:
                             type: boolean
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
           description: Assignment not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /assignments/events/{eventKey}:
     get:
       summary: Get all assignments for an event
@@ -1704,38 +2649,52 @@ paths:
             type: string
           description: Event key (e.g. 2025ohcl)
       responses:
-        '200':
+        "200":
           description: Assignments retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/TaskAssignment'
-        '401':
+                          $ref: "#/components/schemas/TaskAssignment"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Forbidden - Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-                
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /assignments/user/{eventKey}:
     get:
       summary: Get assignments for current user
@@ -1754,36 +2713,46 @@ paths:
             type: string
           description: Event key (e.g. 2025ohcl)
       responses:
-        '200':
+        "200":
           description: Assignments retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/TaskAssignment'
-        '401':
+                          $ref: "#/components/schemas/TaskAssignment"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /team-matches/event/{eventKey}:
     get:
       summary: Get teams for an event
-      description: Get all teams for a specific event with their pit-scouting status (public endpoint)
+      description: Get all teams for a specific event with their pit-scouting status
+        (public endpoint)
       tags:
         - TeamMatches
       parameters:
@@ -1794,36 +2763,46 @@ paths:
             type: string
           description: Event key (e.g., 2025ohcl)
       responses:
-        '200':
+        "200":
           description: Teams retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/TeamMatch'
-        '400':
+                          $ref: "#/components/schemas/TeamMatch"
+        "400":
           description: Bad request - Missing event key
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-                
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /team-matches/pit-status/{eventKey}/{teamKey}:
     put:
       summary: Update pit-scouting status by team key
-      description: Update pit-scouting status for a team using team key. Accepts both formats "frc695" or "695"
+      description: Update pit-scouting status for a team using team key. Accepts both
+        formats "frc695" or "695"
       tags:
         - TeamMatches
       security:
@@ -1856,46 +2835,66 @@ paths:
                   type: boolean
                   description: Pit-scouting completion status
       responses:
-        '200':
+        "200":
           description: Pit-scouting status updated successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TeamMatch'
-        '400':
+                        $ref: "#/components/schemas/TeamMatch"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "404":
           description: Team not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-                
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /team-matches/pit-status/{eventKey}/{teamNumber}:
     put:
       summary: Update pit-scouting status by team number
-      description: Update pit-scouting status for a team using team number. Accepts both formats "frc695" or "695"
+      description: Update pit-scouting status for a team using team number. Accepts
+        both formats "frc695" or "695"
       tags:
         - TeamMatches
       security:
@@ -1928,46 +2927,66 @@ paths:
                   type: boolean
                   description: Pit-scouting completion status
       responses:
-        '200':
+        "200":
           description: Pit-scouting status updated successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/TeamMatch'
-        '400':
+                        $ref: "#/components/schemas/TeamMatch"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '401':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "404":
           description: Team not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/user/me:
     get:
       summary: Get current user Scoutify binding
-      description: Resolve the current authenticated Casdoor user against Scoutify user binding via user_master.um_casdoor_userid
+      description: Resolve the current authenticated Casdoor user against Scoutify
+        user binding via user_master.um_casdoor_userid
       tags:
         - Scoutify
       security:
@@ -1975,29 +2994,39 @@ paths:
         - apiKeyAuth: []
           apiSecretAuth: []
       responses:
-        '200':
+        "200":
           description: Scoutify user binding retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/user/me/android-device:
     get:
       summary: Get current user Android device binding
-      description: Return the current user's Android device identifier from user_master.um_android_device_id
+      description: Return the current user's Android device identifier from
+        user_master.um_android_device_id
       tags:
         - Scoutify
       security:
@@ -2005,24 +3034,34 @@ paths:
         - apiKeyAuth: []
           apiSecretAuth: []
       responses:
-        '200':
+        "200":
           description: Android device binding retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     patch:
       summary: Update current user Android device binding
       description: Update the current bound Scoutify user's user_master.um_android_device_id
@@ -2044,39 +3083,54 @@ paths:
                 androidDeviceId:
                   type: string
       responses:
-        '200':
+        "200":
           description: Android device binding updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/game-matchups:
     get:
       summary: Query Scoutify game matchups
-      description: Read records from Scoutify game_matchup table with optional filters and pagination. This is a public read-only endpoint.
+      description: Read records from Scoutify game_matchup table with optional filters
+        and pagination. This is a public read-only endpoint.
       tags:
         - Scoutify
       responses:
-        '200':
+        "200":
           description: Game matchup records retrieved
           headers:
             RateLimit-Limit:
@@ -2094,19 +3148,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '429':
+                $ref: "#/components/schemas/ApiResponse"
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
       parameters:
         - in: query
           name: smYear
@@ -2146,15 +3210,15 @@ paths:
           schema:
             type: integer
             default: 0
-
   /scoutify/game-details:
     get:
       summary: Query Scoutify game details
-      description: Read records from Scoutify game_details table with optional filters and pagination. This is a public read-only endpoint.
+      description: Read records from Scoutify game_details table with optional filters
+        and pagination. This is a public read-only endpoint.
       tags:
         - Scoutify
       responses:
-        '200':
+        "200":
           description: Game detail records retrieved
           headers:
             RateLimit-Limit:
@@ -2172,19 +3236,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '429':
+                $ref: "#/components/schemas/ApiResponse"
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
       parameters:
         - in: query
           name: smYear
@@ -2232,15 +3306,15 @@ paths:
           schema:
             type: integer
             default: 0
-
   /scoutify/game-comments:
     get:
       summary: Query Scoutify game comments
-      description: Read records from Scoutify game_comments table with optional filters and pagination. This is a public read-only endpoint.
+      description: Read records from Scoutify game_comments table with optional
+        filters and pagination. This is a public read-only endpoint.
       tags:
         - Scoutify
       responses:
-        '200':
+        "200":
           description: Game comment records retrieved
           headers:
             RateLimit-Limit:
@@ -2258,25 +3332,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '429':
+                $ref: "#/components/schemas/ApiResponse"
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 TooManyRequests:
                   summary: Rate limit exceeded
                   value:
                     success: false
                     message: Too many requests, please try again later.
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 QueryFailed:
                   summary: Query game comments failed
@@ -2324,7 +3398,10 @@ paths:
             default: 0
     post:
       summary: Create Scoutify game comment
-      description: Create a game_comments record for a specific match alliance position. gc_um_id is resolved from current authenticated Scoutify binding, and gc_comment is automatically sanitized into a safe format before persistence.
+      description: Create a game_comments record for a specific match alliance
+        position. gc_um_id is resolved from current authenticated Scoutify
+        binding, and gc_comment is automatically sanitized into a safe format
+        before persistence.
       tags:
         - Scoutify
       security:
@@ -2367,14 +3444,15 @@ paths:
                 gc_comment:
                   type: string
                   maxLength: 200
-                  description: Comment text. Special symbols and unsafe control characters are normalized/sanitized by backend.
+                  description: Comment text. Special symbols and unsafe control characters are
+                    normalized/sanitized by backend.
       responses:
-        '200':
+        "200":
           description: Game comment created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiResponse"
               examples:
                 Created:
                   summary: Comment created successfully
@@ -2390,13 +3468,13 @@ paths:
                       game_matchup_gm_alliance_position: 2
                       gc_comment: Spent entire game trying to score algae in processor
                       gc_um_id: ethand
-                      gc_ts: "2025-04-05 13:47:47.382000"
-        '400':
+                      gc_ts: 2025-04-05 13:47:47.382000
+        "400":
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 MissingFields:
                   summary: Missing required fields
@@ -2423,47 +3501,47 @@ paths:
                   value:
                     success: false
                     message: Invalid JSON payload
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 MissingOrInvalidToken:
                   summary: Missing or invalid access token
                   value:
                     success: false
                     message: Unauthorized
-        '404':
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 UserBindingNotFound:
                   summary: No mapped Scoutify user
                   value:
                     success: false
                     message: No Scoutify user binding found for current Casdoor user
-        '500':
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 CreateFailed:
                   summary: Create game comment failed
                   value:
                     success: false
                     message: Failed to create game comment
-
   /scoutify/event-assignments:
     get:
       summary: Query current user event assignments
-      description: Read records from event_teams_user_assignment for the current bound Scoutify user
+      description: Read records from event_teams_user_assignment for the current bound
+        Scoutify user
       tags:
         - Scoutify
       security:
@@ -2494,25 +3572,34 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: Assignment records retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/event-tasks:
     get:
       summary: Query current user event tasks
@@ -2563,29 +3650,39 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: Event task records retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiResponse"
+        "404":
           description: No Scoutify binding found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/admin/users/{teamNumber}/{scoutifyUserId}/android-device:
     patch:
       summary: Admin update Android device binding
-      description: Admin-only endpoint to update or clear a Scoutify user's user_master.um_android_device_id
+      description: Admin-only endpoint to update or clear a Scoutify user's
+        user_master.um_android_device_id
       tags:
         - Scoutify
       security:
@@ -2614,25 +3711,79 @@ paths:
                   type: string
                   nullable: true
       responses:
-        '200':
+        "200":
           description: Android device binding updated by admin
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                MissingPathFields:
+                  value:
+                    success: false
+                    message: teamNumber and scoutifyUserId are required
+                InvalidAndroidDeviceType:
+                  value:
+                    success: false
+                    message: androidDeviceId must be a string or null
+                InvalidJsonPayload:
+                  value:
+                    success: false
+                    message: Invalid JSON payload
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                MissingAuthToken:
+                  value:
+                    success: false
+                    message: No authentication token provided
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '404':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                NotAdmin:
+                  value:
+                    success: false
+                    message: Admin privileges required
+        "404":
           description: Scoutify user not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                ScoutifyUserNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                UpdateFailed:
+                  value:
+                    success: false
+                    message: Failed to update Android device binding
+                VerifyAdminFailed:
+                  value:
+                    success: false
+                    message: Failed to verify admin privileges
   /scoutify/admin/game-details:
     post:
       summary: Admin create game detail
@@ -2673,7 +3824,9 @@ paths:
                   description: Match number
                 game_matchup_gm_alliance:
                   type: string
-                  enum: [red, blue]
+                  enum:
+                    - red
+                    - blue
                   description: Alliance color
                 game_matchup_gm_alliance_position:
                   type: integer
@@ -2698,18 +3851,45 @@ paths:
                   nullable: true
                   description: Optional auton path data
       responses:
-        '200':
+        "200":
           description: Game detail created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     put:
       summary: Admin update game detail
       description: Admin-only endpoint to update game_details rows
@@ -2772,18 +3952,67 @@ paths:
                       nullable: true
                       description: Updated auton path data
       responses:
-        '200':
+        "200":
           description: Game detail updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
+          description: No game detail row updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     delete:
       summary: Admin delete game detail
       description: Admin-only endpoint to delete game_details rows
@@ -2827,23 +4056,61 @@ paths:
                 gd_um_id:
                   type: string
       responses:
-        '200':
+        "200":
           description: Game detail deleted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
+          description: No game detail row deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/admin/event-assignments:
     post:
       summary: Admin create or update event assignment
-      description: Admin-only endpoint to create event_teams_user_assignment rows (upsert behavior)
+      description: Admin-only endpoint to create event_teams_user_assignment rows
+        (upsert behavior)
       tags:
         - Scoutify
       security:
@@ -2877,18 +4144,45 @@ paths:
                   type: integer
                   description: User's team number
       responses:
-        '200':
+        "200":
           description: Event assignment created or updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     delete:
       summary: Admin delete event assignment
       description: Admin-only endpoint to delete event_teams_user_assignment rows
@@ -2921,19 +4215,56 @@ paths:
                   type: string
                   description: Scoutify user ID
       responses:
-        '200':
+        "200":
           description: Event assignment deleted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
+          description: No event assignment row deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/admin/event-tasks:
     post:
       summary: Admin create event task
@@ -2987,19 +4318,45 @@ paths:
                   nullable: true
                   description: Game type (qual, playoff, etc.)
       responses:
-        '200':
+        "200":
           description: Event task created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /scoutify/admin/event-tasks/{taskId}:
     put:
       summary: Admin update event task
@@ -3035,18 +4392,67 @@ paths:
                   nullable: true
                   description: Game type (qual, playoff, etc.)
       responses:
-        '200':
+        "200":
           description: Event task updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
+          description: No event task row updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
     delete:
       summary: Admin delete event task
       description: Admin-only endpoint to delete event_task_tracker rows by task_id
@@ -3061,18 +4467,67 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Event task deleted
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '403':
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Bad request
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Unauthorized
+        "403":
           description: Admin privileges required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Forbidden
+        "404":
+          description: No event task row deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /info/endpoints:
     get:
       summary: Get all available API endpoints
@@ -3080,7 +4535,7 @@ paths:
       tags:
         - Info
       responses:
-        '200':
+        "200":
           description: Endpoints retrieved successfully
           headers:
             ETag:
@@ -3099,7 +4554,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -3110,7 +4565,7 @@ paths:
                           endpoints:
                             type: array
                             items:
-                              $ref: '#/components/schemas/EndpointInfo'
+                              $ref: "#/components/schemas/EndpointInfo"
                           tags:
                             type: array
                             items:
@@ -3118,21 +4573,30 @@ paths:
                           lastUpdated:
                             type: string
                             format: date-time
-        '304':
+        "304":
           description: Not modified, use cached response
-        '429':
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /info/endpoints/by-tag/{tag}:
     get:
       summary: Get API endpoints by tag
@@ -3147,7 +4611,7 @@ paths:
             type: string
           description: Tag name used to filter endpoints
       responses:
-        '200':
+        "200":
           description: Endpoints for the tag retrieved successfully
           headers:
             ETag:
@@ -3166,7 +4630,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
@@ -3179,25 +4643,34 @@ paths:
                           endpoints:
                             type: array
                             items:
-                              $ref: '#/components/schemas/EndpointInfo'
+                              $ref: "#/components/schemas/EndpointInfo"
                           lastUpdated:
                             type: string
                             format: date-time
-        '304':
+        "304":
           description: Not modified, use cached response
-        '429':
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /info/api-info:
     get:
       summary: Get API information
@@ -3205,7 +4678,7 @@ paths:
       tags:
         - Info
       responses:
-        '200':
+        "200":
           description: API information retrieved successfully
           headers:
             ETag:
@@ -3224,26 +4697,35 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ApiInfo'
-        '304':
+                        $ref: "#/components/schemas/ApiInfo"
+        "304":
           description: Not modified, use cached response
-        '429':
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
   /info/status:
     get:
       summary: Get service status
@@ -3251,26 +4733,36 @@ paths:
       tags:
         - Info
       responses:
-        '200':
+        "200":
           description: Status retrieved successfully
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                  - $ref: "#/components/schemas/ApiResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ServiceStatus'
-        '429':
+                        $ref: "#/components/schemas/ServiceStatus"
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Too many requests
+        "500":
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
