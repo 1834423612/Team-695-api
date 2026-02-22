@@ -3079,9 +3079,20 @@ paths:
   /event/event-id:
     get:
       summary: Get current event ID
-      description: Retrieve the ID of the most recent event (public endpoint)
+      description: By default returns the most recent event ID. With query parameters, can return all event IDs or filter by a specific event ID.
       tags:
         - Events
+      parameters:
+        - in: query
+          name: all
+          schema:
+            type: boolean
+          description: Set to true to return all event IDs
+        - in: query
+          name: eventId
+          schema:
+            type: string
+          description: Return records matching the specified event ID
       responses:
         "200":
           description: Event ID retrieved successfully
@@ -3089,6 +3100,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetEventEventIdSuccess"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Invalid query parameters
         "404":
           description: Event not found
           content:
@@ -3100,6 +3122,30 @@ paths:
                   value:
                     success: false
                     message: Not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Server error
+  /event/events:
+    get:
+      summary: Get all event IDs
+      description: Retrieve all event IDs ordered by newest first
+      tags:
+        - Events
+      responses:
+        "200":
+          description: Event IDs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetEventEventIdSuccess"
         "500":
           description: Server error
           content:
