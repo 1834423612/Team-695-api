@@ -3,7 +3,7 @@ info:
   title: Team 695 API
   description: Team 695 API Documentation for multiple services including
     authentication, events, surveys, teams, uploads, and feedback
-  version: 1.5.6
+  version: 1.6.1
 servers:
   - url: https://api.team695.com
     description: Production server
@@ -484,27 +484,7 @@ x-error-catalog:
     /scoutify/admin/users/{teamNumber}/{scoutifyUserId}/android-device:
       patch:
         "400":
-          - teamNumber and scoutifyUserId are required
-          - androidDeviceId must be a string or null
-          - Invalid JSON payload
-        "401":
-          - No authentication token provided
-          - Token has been revoked
-          - Token is invalid or has been revoked
-          - Token has expired
-          - Token validation failed
-          - Failed to verify token
-        "403":
-          - Admin privileges required
-        "404":
-          - Scoutify user not found
-        "500":
-          - Failed to update Android device binding
-          - Failed to verify admin privileges
-    /scoutify/admin/users/{teamNumber}/by-username/{scoutifyUsername}/android-device:
-      patch:
-        "400":
-          - teamNumber and scoutifyUsername are required
+          - teamNumber and scoutifyUserId or scoutifyUsername are required
           - androidDeviceId must be a string or null
           - Invalid JSON payload
         "401":
@@ -3839,6 +3819,17 @@ paths:
         - bearerAuth: []
         - apiKeyAuth: []
           apiSecretAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, binding is resolved directly by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
       responses:
         "200":
           description: Scoutify user binding retrieved
@@ -3846,6 +3837,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyUserMeSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      team_master_tm_number: 695
+                      um_id: johnd
+                      um_name: johnd
+                      um_email: user@example.com
+                      um_active: Y
+                      um_admin_f: 0
+                      um_casdoor_userid: Team695/johnd
+                      um_android_device_id: device-abc123
         "404":
           description: No Scoutify binding found
           content:
@@ -3856,7 +3860,11 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Not found
+                    message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -3879,6 +3887,17 @@ paths:
         - bearerAuth: []
         - apiKeyAuth: []
           apiSecretAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, binding is resolved directly by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
       responses:
         "200":
           description: Android device binding retrieved
@@ -3886,6 +3905,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyUserMeAndroidDevSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      um_id: johnd
+                      team_master_tm_number: 695
+                      um_casdoor_userid: Team695/johnd
+                      um_android_device_id: device-abc123
         "404":
           description: No Scoutify binding found
           content:
@@ -3896,7 +3924,11 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Not found
+                    message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -3917,6 +3949,17 @@ paths:
         - bearerAuth: []
         - apiKeyAuth: []
           apiSecretAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, target binding is resolved directly by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
       requestBody:
         required: true
         content:
@@ -3935,6 +3978,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PatchScoutifyUserMeAndroidDevSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    message: Android device binding updated
+                    data:
+                      um_id: johnd
+                      team_master_tm_number: 695
+                      um_casdoor_userid: Team695/johnd
+                      um_android_device_id: device-new-001
         "400":
           description: Bad request
           content:
@@ -3956,7 +4009,11 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Not found
+                    message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -3995,6 +4052,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyGameMatchupsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      - frc_season_master_sm_year: 2025
+                        competition_master_cm_event_code: ohcl
+                        gm_game_type: Q
+                        gm_number: 74
+                        gm_alliance: R
+                        gm_alliance_position: 2
+                        team_master_tm_number: 695
+                        gm_value: 1
+                        gm_timestamp: 2025-04-05 13:40:21.000000
         "429":
           description: Too many requests
           content:
@@ -4005,7 +4076,7 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Too many requests
+                    message: Too many Scoutify query requests per minute.
         "500":
           description: Server error
           content:
@@ -4016,7 +4087,7 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Server error
+                    message: Failed to query game matchups
       parameters:
         - in: query
           name: smYear
@@ -4046,6 +4117,26 @@ paths:
           name: teamNumber
           schema:
             type: integer
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, assignment scope resolves by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Scoutify username. When provided and teamNumber is absent, backend resolves user team and queries by that team.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
         - in: query
           name: limit
           schema:
@@ -4083,6 +4174,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyGameDetailsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      - frc_season_master_sm_year: 2025
+                        competition_master_cm_event_code: ohcl
+                        game_matchup_gm_game_type: Q
+                        game_matchup_gm_number: 74
+                        game_matchup_gm_alliance: R
+                        game_matchup_gm_alliance_position: 2
+                        game_element_group_geg_grp_key: 1
+                        game_element_ge_key: 5
+                        gd_value: 3
+                        gd_score: 6
+                        gd_um_id: johnd
+                        gd_auton_path: null
         "429":
           description: Too many requests
           content:
@@ -4189,6 +4297,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyGameCommentsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      - frc_season_master_sm_year: 2025
+                        competition_master_cm_event_code: ohcl
+                        game_matchup_gm_game_type: Q
+                        game_matchup_gm_number: 74
+                        game_matchup_gm_alliance: R
+                        game_matchup_gm_alliance_position: 2
+                        gc_comment: Good coral cycle speed
+                        gc_um_id: johnd
+                        gc_ts: 2025-04-05 13:47:47.382000
         "429":
           description: Too many requests
           content:
@@ -4274,6 +4396,17 @@ paths:
         - bearerAuth: []
         - apiKeyAuth: []
           apiSecretAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. If provided, comment user binding resolves by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
       requestBody:
         required: true
         content:
@@ -4333,7 +4466,7 @@ paths:
                       game_matchup_gm_alliance: R
                       game_matchup_gm_alliance_position: 2
                       gc_comment: Spent entire game trying to score algae in processor
-                      gc_um_id: ethand
+                      gc_um_id: johnd
                       gc_ts: 2025-04-05 13:47:47.382000
         "400":
           description: Bad request
@@ -4444,6 +4577,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyEventAssignmentsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      boundUser:
+                        team_master_tm_number: 695
+                        um_id: johnd
+                      rows:
+                        - sm_year: 2025
+                          cm_event_code: ohcl
+                          tm_number: 1678
+                          um_id: johnd
+                          user_tm_number: 695
         "404":
           description: No Scoutify binding found
           content:
@@ -4454,7 +4601,11 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Not found
+                    message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -4506,6 +4657,16 @@ paths:
           schema:
             type: integer
         - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, task scope resolves by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
+        - in: query
           name: limit
           schema:
             type: integer
@@ -4522,6 +4683,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetScoutifyEventTasksSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      boundUser:
+                        team_master_tm_number: 695
+                        um_id: johnd
+                      rows:
+                        - task_id: 101
+                          sm_year: 2025
+                          cm_event_code: ohcl
+                          tm_number: 1678
+                          um_id: johnd
+                          user_tm_number: 695
+                          gm_number: 74
+                          gm_game_type: Q
+                          checkin_task: pre-match check-in
+                          task_completed: 0
         "404":
           description: No Scoutify binding found
           content:
@@ -4532,7 +4712,11 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Not found
+                    message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -4566,6 +4750,16 @@ paths:
           required: true
           schema:
             type: string
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. If provided, update target resolves by username.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -4584,6 +4778,16 @@ paths:
               schema:
                 $ref: "#/components/schemas/PatchScoutifyAdminUsersByTeamNoByScoutUserAndroidDe\
                   vSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    message: Android device binding updated by admin
+                    data:
+                      team_master_tm_number: 695
+                      um_id: johnd
+                      um_casdoor_userid: Team695/johnd
+                      um_android_device_id: device-admin-updated
         "400":
           description: Bad request
           content:
@@ -4594,7 +4798,7 @@ paths:
                 MissingPathFields:
                   value:
                     success: false
-                    message: teamNumber and scoutifyUserId are required
+                    message: teamNumber and scoutifyUserId or scoutifyUsername are required
                 InvalidAndroidDeviceType:
                   value:
                     success: false
@@ -4651,102 +4855,6 @@ paths:
                   value:
                     success: false
                     message: Failed to verify admin privileges
-  /scoutify/admin/users/{teamNumber}/by-username/{scoutifyUsername}/android-device:
-    patch:
-      summary: Admin update Android device binding by username
-      description: Admin-only endpoint to update or clear a Scoutify user's user_master.um_android_device_id via user_master.um_name
-      tags:
-        - Scoutify
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
-          apiSecretAuth: []
-      parameters:
-        - in: path
-          name: teamNumber
-          required: true
-          schema:
-            type: integer
-        - in: path
-          name: scoutifyUsername
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                androidDeviceId:
-                  type: string
-                  nullable: true
-      responses:
-        "200":
-          description: Android device binding updated by admin
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PatchScoutifyAdminUsersByTeamNoByScoutUserAndroidDevSuccess"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorResponse"
-              examples:
-                MissingPathFields:
-                  value:
-                    success: false
-                    message: teamNumber and scoutifyUsername are required
-                InvalidAndroidDeviceType:
-                  value:
-                    success: false
-                    message: androidDeviceId must be a string or null
-                InvalidJsonPayload:
-                  value:
-                    success: false
-                    message: Invalid JSON payload
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorResponse"
-              examples:
-                MissingAuthToken:
-                  value:
-                    success: false
-                    message: No authentication token provided
-        "403":
-          description: Admin privileges required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorResponse"
-              examples:
-                NotAdmin:
-                  value:
-                    success: false
-                    message: Admin privileges required
-        "404":
-          description: Scoutify user not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorResponse"
-              examples:
-                ScoutifyUserNotFound:
-                  value:
-                    success: false
-                    message: Scoutify user not found
-        "500":
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorResponse"
   /scoutify/admin/game-details:
     post:
       summary: Admin create game detail
@@ -4755,6 +4863,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve gd_um_id when body omits gd_um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -4825,6 +4944,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostScoutifyAdminGameDetailsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    message: Game detail created
         "401":
           description: Unauthorized
           content:
@@ -4865,6 +4989,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve match.gd_um_id when omitted.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -4969,6 +5104,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found by username
                 DefaultError:
                   value:
                     success: false
@@ -4991,6 +5130,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve gd_um_id when body omits gd_um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -5065,6 +5215,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found by username
                 DefaultError:
                   value:
                     success: false
@@ -5089,6 +5243,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve um_id when body omits um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -5126,6 +5291,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostScoutifyAdminEventAssignmentsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    message: Event assignment created or updated
         "401":
           description: Unauthorized
           content:
@@ -5166,6 +5336,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve um_id when body omits um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -5231,6 +5412,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found by username
                 DefaultError:
                   value:
                     success: false
@@ -5254,6 +5439,17 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. Used to resolve um_id when body omits um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -5307,6 +5503,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostScoutifyAdminEventTasksSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    message: Event task created
         "401":
           description: Unauthorized
           content:
@@ -5353,7 +5554,7 @@ paths:
           name: taskId
           required: true
           schema:
-            type: integer
+          description: Optional team number for username disambiguation.
       requestBody:
         required: true
         content:
@@ -5421,6 +5622,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found by username
                 DefaultError:
                   value:
                     success: false
@@ -5449,6 +5654,16 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, delete is scoped to that user.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number for username disambiguation.
       responses:
         "200":
           description: Event task deleted
@@ -5496,6 +5711,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                UsernameNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found by username
                 DefaultError:
                   value:
                     success: false

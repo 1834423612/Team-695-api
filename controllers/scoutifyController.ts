@@ -4,11 +4,59 @@ import { success, error } from '../utils/responses';
 import { sanitizeGameComment } from '../utils/sanitizeText';
 
 class ScoutifyController {
+    constructor() {
+        this.getCurrentUserBinding = this.getCurrentUserBinding.bind(this);
+        this.getCurrentAndroidDeviceBinding = this.getCurrentAndroidDeviceBinding.bind(this);
+        this.updateCurrentAndroidDeviceBinding = this.updateCurrentAndroidDeviceBinding.bind(this);
+        this.adminUpdateAndroidDeviceBinding = this.adminUpdateAndroidDeviceBinding.bind(this);
+        this.getGameMatchups = this.getGameMatchups.bind(this);
+        this.getGameDetails = this.getGameDetails.bind(this);
+        this.getGameComments = this.getGameComments.bind(this);
+        this.createGameComment = this.createGameComment.bind(this);
+        this.getEventAssignments = this.getEventAssignments.bind(this);
+        this.getEventTasks = this.getEventTasks.bind(this);
+        this.createGameDetail = this.createGameDetail.bind(this);
+        this.updateGameDetail = this.updateGameDetail.bind(this);
+        this.deleteGameDetail = this.deleteGameDetail.bind(this);
+        this.createEventAssignment = this.createEventAssignment.bind(this);
+        this.deleteEventAssignment = this.deleteEventAssignment.bind(this);
+        this.createEventTask = this.createEventTask.bind(this);
+        this.updateEventTask = this.updateEventTask.bind(this);
+        this.deleteEventTask = this.deleteEventTask.bind(this);
+    }
+
+    private getScopedUsername(req: Request) {
+        const value = req.query.scoutifyUsername;
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        const trimmed = value.trim();
+        return trimmed || undefined;
+    }
+
+    private getScopedTeamNumber(req: Request) {
+        const value = req.query.scoutifyUserTeamNumber;
+        if (value === undefined) {
+            return undefined;
+        }
+
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    }
+
     async getCurrentUserBinding(req: Request, res: Response) {
         try {
-            const boundUser = await scoutifyService.getCurrentBoundUser(req.user);
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
+            const boundUser = scopedUsername
+                ? await scoutifyService.getUserBindingByUsername(scopedUsername, scopedTeamNumber)
+                : await scoutifyService.getCurrentBoundUser(req.user);
+
             if (!boundUser) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
             return success(res, boundUser);
         } catch (err) {
@@ -18,9 +66,14 @@ class ScoutifyController {
 
     async getCurrentAndroidDeviceBinding(req: Request, res: Response) {
         try {
-            const binding = await scoutifyService.getCurrentAndroidDeviceBinding(req.user);
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
+            const binding = await scoutifyService.getCurrentAndroidDeviceBinding(req.user, scopedUsername, scopedTeamNumber);
             if (!binding) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
             return success(res, binding);
         } catch (err) {
@@ -31,14 +84,23 @@ class ScoutifyController {
     async updateCurrentAndroidDeviceBinding(req: Request, res: Response) {
         try {
             const { androidDeviceId } = req.body;
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
 
             if (typeof androidDeviceId !== 'string' || !androidDeviceId.trim()) {
                 return error(res, 400, 'androidDeviceId is required');
             }
 
-            const updated = await scoutifyService.updateCurrentAndroidDeviceBinding(req.user, androidDeviceId.trim());
+            const updated = await scoutifyService.updateCurrentAndroidDeviceBinding(
+                req.user,
+                androidDeviceId.trim(),
+                scopedUsername,
+                scopedTeamNumber,
+            );
             if (!updated) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
 
             return success(res, updated, 'Android device binding updated');
@@ -51,42 +113,21 @@ class ScoutifyController {
         try {
             const teamNumber = Number(req.params.teamNumber);
             const scoutifyUserId = req.params.scoutifyUserId;
+            const scopedUsername = this.getScopedUsername(req);
             const androidDeviceId = req.body.androidDeviceId ?? null;
 
-            if (!teamNumber || !scoutifyUserId) {
-                return error(res, 400, 'teamNumber and scoutifyUserId are required');
+            if (!teamNumber || (!scoutifyUserId && !scopedUsername)) {
+                return error(res, 400, 'teamNumber and scoutifyUserId or scoutifyUsername are required');
             }
 
             if (androidDeviceId !== null && typeof androidDeviceId !== 'string') {
                 return error(res, 400, 'androidDeviceId must be a string or null');
             }
 
-            const updated = await scoutifyService.updateAndroidDeviceBindingByAdmin(teamNumber, scoutifyUserId, androidDeviceId);
-            if (!updated) {
-                return error(res, 404, 'Scoutify user not found');
-            }
+            const updated = scopedUsername
+                ? await scoutifyService.updateAndroidDeviceBindingByAdminUsingUsername(teamNumber, scopedUsername, androidDeviceId)
+                : await scoutifyService.updateAndroidDeviceBindingByAdmin(teamNumber, scoutifyUserId, androidDeviceId);
 
-            return success(res, updated, 'Android device binding updated by admin');
-        } catch (err) {
-            return error(res, 500, 'Failed to update Android device binding', err);
-        }
-    }
-
-    async adminUpdateAndroidDeviceBindingByUsername(req: Request, res: Response) {
-        try {
-            const teamNumber = Number(req.params.teamNumber);
-            const scoutifyUsername = req.params.scoutifyUsername;
-            const androidDeviceId = req.body.androidDeviceId ?? null;
-
-            if (!teamNumber || !scoutifyUsername) {
-                return error(res, 400, 'teamNumber and scoutifyUsername are required');
-            }
-
-            if (androidDeviceId !== null && typeof androidDeviceId !== 'string') {
-                return error(res, 400, 'androidDeviceId must be a string or null');
-            }
-
-            const updated = await scoutifyService.updateAndroidDeviceBindingByAdminUsingUsername(teamNumber, scoutifyUsername, androidDeviceId);
             if (!updated) {
                 return error(res, 404, 'Scoutify user not found');
             }
@@ -99,6 +140,19 @@ class ScoutifyController {
 
     async getGameMatchups(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
+            let teamNumber = req.query.teamNumber as string;
+
+            if (scopedUsername && !teamNumber) {
+                const scopedUser = await scoutifyService.getUserBindingByUsername(scopedUsername, scopedTeamNumber);
+                if (!scopedUser) {
+                    return success(res, []);
+                }
+                teamNumber = String(scopedUser.team_master_tm_number);
+            }
+
             const rows = await scoutifyService.listGameMatchups(
                 {
                     frc_season_master_sm_year: req.query.smYear as string,
@@ -107,7 +161,7 @@ class ScoutifyController {
                     gm_number: req.query.gameNumber as string,
                     gm_alliance: req.query.alliance as string,
                     gm_alliance_position: req.query.alliancePosition as string,
-                    team_master_tm_number: req.query.teamNumber as string,
+                    team_master_tm_number: teamNumber,
                 },
                 Number(req.query.limit),
                 Number(req.query.offset),
@@ -122,13 +176,13 @@ class ScoutifyController {
     async getGameDetails(req: Request, res: Response) {
         try {
             let scoutifyUserId = req.query.scoutifyUserId as string;
-            const scoutifyUsername = req.query.scoutifyUsername as string;
-            const scoutifyUserTeamNumber = req.query.scoutifyUserTeamNumber as string;
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
 
-            if (!scoutifyUserId && scoutifyUsername) {
+            if (!scoutifyUserId && scopedUsername) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
-                    scoutifyUsername,
-                    Number(scoutifyUserTeamNumber),
+                    scopedUsername,
+                    scopedTeamNumber,
                 );
 
                 if (!resolvedScoutifyUserId) {
@@ -163,13 +217,13 @@ class ScoutifyController {
     async getGameComments(req: Request, res: Response) {
         try {
             let scoutifyUserId = req.query.scoutifyUserId as string;
-            const scoutifyUsername = req.query.scoutifyUsername as string;
-            const scoutifyUserTeamNumber = req.query.scoutifyUserTeamNumber as string;
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
 
-            if (!scoutifyUserId && scoutifyUsername) {
+            if (!scoutifyUserId && scopedUsername) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
-                    scoutifyUsername,
-                    Number(scoutifyUserTeamNumber),
+                    scopedUsername,
+                    scopedTeamNumber,
                 );
 
                 if (!resolvedScoutifyUserId) {
@@ -201,6 +255,9 @@ class ScoutifyController {
 
     async createGameComment(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
             const {
                 frc_season_master_sm_year,
                 competition_master_cm_event_code,
@@ -247,10 +304,12 @@ class ScoutifyController {
                 game_matchup_gm_alliance: String(game_matchup_gm_alliance),
                 game_matchup_gm_alliance_position: alliancePosition,
                 gc_comment: safeComment,
-            });
+            }, scopedUsername, scopedTeamNumber);
 
             if (!created) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
 
             return success(res, created, 'Game comment created');
@@ -261,6 +320,9 @@ class ScoutifyController {
 
     async getEventAssignments(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
             const result = await scoutifyService.listEventAssignments(
                 req.user,
                 {
@@ -270,10 +332,14 @@ class ScoutifyController {
                 },
                 Number(req.query.limit),
                 Number(req.query.offset),
+                scopedUsername,
+                scopedTeamNumber,
             );
 
             if (!result) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
 
             return success(res, result);
@@ -284,6 +350,9 @@ class ScoutifyController {
 
     async getEventTasks(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
             const result = await scoutifyService.listEventTasks(
                 req.user,
                 {
@@ -297,10 +366,14 @@ class ScoutifyController {
                 },
                 Number(req.query.limit),
                 Number(req.query.offset),
+                scopedUsername,
+                scopedTeamNumber,
             );
 
             if (!result) {
-                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+                return error(res, 404, scopedUsername
+                    ? 'No Scoutify user found for provided username'
+                    : 'No Scoutify user binding found for current Casdoor user');
             }
 
             return success(res, result);
@@ -311,8 +384,20 @@ class ScoutifyController {
 
     async createGameDetail(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = { ...req.body };
-            if (!payload.gd_um_id && payload.gd_um_name) {
+
+            if (!payload.gd_um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.gd_um_id = resolvedScoutifyUserId;
+            } else if (!payload.gd_um_id && payload.gd_um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(payload.gd_um_name),
                     Number(payload.user_tm_number),
@@ -332,13 +417,24 @@ class ScoutifyController {
 
     async updateGameDetail(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const match = { ...(req.body?.match || {}) };
             const changes = req.body?.changes;
             if (!match || !changes) {
                 return error(res, 400, 'match and changes are required');
             }
 
-            if (!match.gd_um_id && match.gd_um_name) {
+            if (!match.gd_um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(match.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                match.gd_um_id = resolvedScoutifyUserId;
+            } else if (!match.gd_um_id && match.gd_um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(match.gd_um_name),
                     Number(match.user_tm_number),
@@ -362,8 +458,20 @@ class ScoutifyController {
 
     async deleteGameDetail(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = { ...req.body };
-            if (!payload.gd_um_id && payload.gd_um_name) {
+
+            if (!payload.gd_um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.gd_um_id = resolvedScoutifyUserId;
+            } else if (!payload.gd_um_id && payload.gd_um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(payload.gd_um_name),
                     Number(payload.user_tm_number),
@@ -387,8 +495,20 @@ class ScoutifyController {
 
     async createEventAssignment(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = { ...req.body };
-            if (!payload.um_id && payload.um_name) {
+
+            if (!payload.um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            } else if (!payload.um_id && payload.um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(payload.um_name),
                     Number(payload.user_tm_number),
@@ -408,8 +528,20 @@ class ScoutifyController {
 
     async deleteEventAssignment(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = { ...req.body };
-            if (!payload.um_id && payload.um_name) {
+
+            if (!payload.um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            } else if (!payload.um_id && payload.um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(payload.um_name),
                     Number(payload.user_tm_number),
@@ -433,8 +565,20 @@ class ScoutifyController {
 
     async createEventTask(req: Request, res: Response) {
         try {
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = { ...req.body };
-            if (!payload.um_id && payload.um_name) {
+
+            if (!payload.um_id && scopedUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scopedUsername,
+                    scopedTeamNumber ?? Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            } else if (!payload.um_id && payload.um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     String(payload.um_name),
                     Number(payload.user_tm_number),
@@ -455,11 +599,22 @@ class ScoutifyController {
     async updateEventTask(req: Request, res: Response) {
         try {
             const taskId = Number(req.params.taskId);
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
             if (!taskId) {
                 return error(res, 400, 'taskId is required');
             }
 
-            const result = await scoutifyService.updateEventTask(taskId, req.body);
+            const scopedUser = scopedUsername
+                ? await scoutifyService.getUserBindingByUsername(scopedUsername, scopedTeamNumber)
+                : null;
+
+            if (scopedUsername && !scopedUser) {
+                return error(res, 404, 'Scoutify user not found by username');
+            }
+
+            const result = await scoutifyService.updateEventTask(taskId, req.body, scopedUser);
             if (!result.affectedRows) {
                 return error(res, 404, 'No event task row updated');
             }
@@ -473,11 +628,22 @@ class ScoutifyController {
     async deleteEventTask(req: Request, res: Response) {
         try {
             const taskId = Number(req.params.taskId);
+            const scopedUsername = this.getScopedUsername(req);
+            const scopedTeamNumber = this.getScopedTeamNumber(req);
+
             if (!taskId) {
                 return error(res, 400, 'taskId is required');
             }
 
-            const result = await scoutifyService.deleteEventTask(taskId);
+            const scopedUser = scopedUsername
+                ? await scoutifyService.getUserBindingByUsername(scopedUsername, scopedTeamNumber)
+                : null;
+
+            if (scopedUsername && !scopedUser) {
+                return error(res, 404, 'Scoutify user not found by username');
+            }
+
+            const result = await scoutifyService.deleteEventTask(taskId, scopedUser);
             if (!result.affectedRows) {
                 return error(res, 404, 'No event task row deleted');
             }

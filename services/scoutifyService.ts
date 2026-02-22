@@ -156,8 +156,17 @@ class ScoutifyService {
         return this.findBoundUser(authUser);
     }
 
-    async getCurrentAndroidDeviceBinding(authUser: any) {
-        const boundUser = await this.findBoundUser(authUser);
+    async resolveBoundUser(authUser: any, username?: string, teamNumber?: number) {
+        const normalizedUsername = this.normalizeString(username);
+        if (normalizedUsername) {
+            return this.findUserByUsername(normalizedUsername, teamNumber);
+        }
+
+        return this.findBoundUser(authUser);
+    }
+
+    async getCurrentAndroidDeviceBinding(authUser: any, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
         if (!boundUser) {
             return null;
         }
@@ -170,8 +179,8 @@ class ScoutifyService {
         };
     }
 
-    async updateCurrentAndroidDeviceBinding(authUser: any, androidDeviceId: string) {
-        const boundUser = await this.findBoundUser(authUser);
+    async updateCurrentAndroidDeviceBinding(authUser: any, androidDeviceId: string, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
         if (!boundUser) {
             return null;
         }
@@ -183,7 +192,7 @@ class ScoutifyService {
             [androidDeviceId, boundUser.team_master_tm_number, boundUser.um_id],
         );
 
-        return this.getCurrentAndroidDeviceBinding(authUser);
+        return this.getCurrentAndroidDeviceBinding(authUser, username, teamNumber);
     }
 
     async updateAndroidDeviceBindingByAdmin(teamNumber: number, scoutifyUserId: string, androidDeviceId: string | null) {
@@ -312,8 +321,8 @@ class ScoutifyService {
         return rows;
     }
 
-    async createGameComment(authUser: any, payload: CreateGameCommentPayload) {
-        const boundUser = await this.findBoundUser(authUser);
+    async createGameComment(authUser: any, payload: CreateGameCommentPayload, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
         if (!boundUser) {
             return null;
         }
@@ -380,8 +389,8 @@ class ScoutifyService {
         };
     }
 
-    async listEventAssignments(authUser: any, filters: QueryFilters, limit?: number, offset?: number) {
-        const boundUser = await this.findBoundUser(authUser);
+    async listEventAssignments(authUser: any, filters: QueryFilters, limit?: number, offset?: number, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
         if (!boundUser) {
             return null;
         }
@@ -413,8 +422,8 @@ class ScoutifyService {
         };
     }
 
-    async listEventTasks(authUser: any, filters: QueryFilters, limit?: number, offset?: number) {
-        const boundUser = await this.findBoundUser(authUser);
+    async listEventTasks(authUser: any, filters: QueryFilters, limit?: number, offset?: number, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
         if (!boundUser) {
             return null;
         }
@@ -691,7 +700,7 @@ class ScoutifyService {
         checkin_task?: string;
         task_completed?: number;
         gm_game_type?: string | null;
-    }) {
+    }, scopedUser?: Pick<BoundScoutifyUser, 'um_id' | 'team_master_tm_number'> | null) {
         const fields: string[] = [];
         const values: Array<string | number | null> = [];
 
@@ -716,20 +725,36 @@ class ScoutifyService {
             return { affectedRows: 0 };
         }
 
+        const whereSql = scopedUser
+            ? 'WHERE task_id = ? AND um_id = ? AND user_tm_number = ?'
+            : 'WHERE task_id = ?';
+
+        const whereParams: Array<string | number> = scopedUser
+            ? [taskId, scopedUser.um_id, scopedUser.team_master_tm_number]
+            : [taskId];
+
         const [result]: any = await scoutifyPool.query(
             `UPDATE event_task_tracker
              SET ${fields.join(', ')}
-             WHERE task_id = ?`,
-            [...values, taskId],
+             ${whereSql}`,
+            [...values, ...whereParams],
         );
 
         return { affectedRows: result?.affectedRows || 0 };
     }
 
-    async deleteEventTask(taskId: number) {
+    async deleteEventTask(taskId: number, scopedUser?: Pick<BoundScoutifyUser, 'um_id' | 'team_master_tm_number'> | null) {
+        const whereSql = scopedUser
+            ? 'WHERE task_id = ? AND um_id = ? AND user_tm_number = ?'
+            : 'WHERE task_id = ?';
+
+        const whereParams: Array<string | number> = scopedUser
+            ? [taskId, scopedUser.um_id, scopedUser.team_master_tm_number]
+            : [taskId];
+
         const [result]: any = await scoutifyPool.query(
-            `DELETE FROM event_task_tracker WHERE task_id = ?`,
-            [taskId],
+            `DELETE FROM event_task_tracker ${whereSql}`,
+            whereParams,
         );
 
         return { affectedRows: result?.affectedRows || 0 };
