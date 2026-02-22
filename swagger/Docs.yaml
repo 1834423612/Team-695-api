@@ -828,7 +828,24 @@ components:
       properties:
         eventId:
           type: string
-          description: ID of the current event
+          description: Event identifier (e.g. 2026miket)
+        eventName:
+          type: string
+          description: Event display name
+        eventDate:
+          type: string
+          format: date
+          description: Event date (YYYY-MM-DD)
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Event creation time (falls back to updatedAt when unavailable)
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update time
     TeamResponse:
       type: object
       properties:
@@ -3079,7 +3096,7 @@ paths:
   /event/event-id:
     get:
       summary: Get current event ID
-      description: By default returns the most recent event ID. With query parameters, can return all event IDs or filter by a specific event ID.
+      description: By default returns the latest event record. With query parameters, can return all event records or filter by a specific event ID.
       tags:
         - Events
       parameters:
@@ -3087,7 +3104,7 @@ paths:
           name: all
           schema:
             type: boolean
-          description: Set to true to return all event IDs
+          description: Set to true to return all event records
         - in: query
           name: eventId
           schema:
@@ -3095,7 +3112,7 @@ paths:
           description: Return records matching the specified event ID
       responses:
         "200":
-          description: Event ID retrieved successfully
+          description: Event record(s) retrieved successfully
           content:
             application/json:
               schema:
@@ -3135,13 +3152,13 @@ paths:
                     message: Server error
   /event/events:
     get:
-      summary: Get all event IDs
-      description: Retrieve all event IDs ordered by newest first
+      summary: Get all events
+      description: Retrieve all event records ordered by newest update first
       tags:
         - Events
       responses:
         "200":
-          description: Event IDs retrieved successfully
+          description: Event records retrieved successfully
           content:
             application/json:
               schema:
