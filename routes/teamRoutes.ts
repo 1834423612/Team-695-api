@@ -8,10 +8,17 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 
 router.get('/teams', async (req, res) => {
     try {
-        const { limit, teamNumber, teamName } = req.query;
+        const { query: searchQuery, limit, limits, teamNumber, teamName } = req.query;
 
         const conditions: string[] = [];
         const params: Array<string | number> = [];
+
+        const queryText = String(searchQuery ?? '').trim();
+        if (queryText.length > 0) {
+            const escapedQuery = escapeLike(queryText);
+            conditions.push("team_number LIKE ? ESCAPE '\\\\'");
+            params.push(`${escapedQuery}%`);
+        }
 
         if (teamNumber) {
             conditions.push('team_number = ?');
@@ -25,23 +32,24 @@ router.get('/teams', async (req, res) => {
         }
 
         const maxLimit = 1000;
-        const limitNumber = Number.parseInt(String(limit ?? ''), 10);
+        const rawLimit = limit ?? limits;
+        const limitNumber = Number.parseInt(String(rawLimit ?? ''), 10);
         const safeLimit = Number.isFinite(limitNumber) && limitNumber > 0
             ? Math.min(limitNumber, maxLimit)
             : undefined;
 
-        let query = 'SELECT team_number, team_name FROM teams';
+        let sql = 'SELECT team_number, team_name FROM teams';
         if (conditions.length) {
-            query += ' WHERE ' + conditions.join(' AND ');
+            sql += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY team_number ASC';
+        sql += ' ORDER BY team_number ASC';
         if (safeLimit !== undefined) {
-            query += ' LIMIT ?';
+            sql += ' LIMIT ?';
             params.push(safeLimit);
         }
 
-        const [rows] = await pool.query(query, params);
+        const [rows] = await pool.query(sql, params);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching teams:', error);
