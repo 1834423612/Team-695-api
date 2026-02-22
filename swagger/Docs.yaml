@@ -1317,6 +1317,938 @@ components:
               type: string
             endpoints:
               type: string
+    PostAuthCallback200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TokenResponse"
+      example:
+        success: true
+    GetAuthUserInfo200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/DecodedToken"
+      example:
+        success: true
+    GetAuthMe200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/UserInfo"
+      example:
+        success: true
+    GetAuthValidate200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+            isAdmin:
+              type: boolean
+            tokenStatus:
+              type: string
+              enum:
+                - active
+            fromCache:
+              type: boolean
+              description: Indicates if the result came from cache
+      example:
+        success: true
+    PostAuthRefreshToken200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TokenResponse"
+      example:
+        success: true
+    PostAuthLogout200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Logged out successfully
+            details:
+              type: object
+              properties:
+                localBlacklist:
+                  type: boolean
+                casdoorLogout:
+                  type: boolean
+                casdoorDeleteToken:
+                  type: boolean
+      example:
+        success: true
+    PostAuthRevokeToken200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Token revoked successfully
+            details:
+              type: object
+              properties:
+                localBlacklist:
+                  type: boolean
+                casdoorLogout:
+                  type: boolean
+                casdoorDeleteToken:
+                  type: boolean
+      example:
+        success: true
+    GetAuthUsers200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserInfo"
+            total:
+              type: integer
+      example:
+        success: true
+    PostAuthApiKeys200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            accessKey:
+              type: string
+              description: Generated API access key
+            accessSecret:
+              type: string
+              description: Generated API access secret
+            userId:
+              type: string
+              description: User ID the keys were generated for
+            message:
+              type: string
+              example: API Keys generated successfully
+      example:
+        success: true
+    PostFeedback201SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+      example:
+        success: true
+    PostUploadUpload200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/UploadResponse"
+      example:
+        success: true
+    DeleteUploadImagesByimageId200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+      example:
+        success: true
+    GetEventEventId200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/EventResponse"
+      example:
+        success: true
+    GetTeamTeams200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PostSurveySubmit200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+      example:
+        success: true
+    GetSurveyQuery200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SurveyResponse"
+      example:
+        success: true
+    PostWebhookTba200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            received:
+              type: boolean
+            verification_key:
+              type: string
+              description: Only present for verification messages
+      example:
+        success: true
+    GetWebhookTbaStatus200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/WebhookStatus"
+      example:
+        success: true
+    PostAssignments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TaskAssignment"
+      example:
+        success: true
+    PutAssignmentsByid200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TaskAssignment"
+      example:
+        success: true
+    DeleteAssignmentsByid200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            deleted:
+              type: boolean
+      example:
+        success: true
+    GetAssignmentsEventsByeventKey200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskAssignment"
+      example:
+        success: true
+    GetAssignmentsUserByeventKey200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskAssignment"
+      example:
+        success: true
+    GetTeamMatchesEventByeventKey200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamMatch"
+      example:
+        success: true
+    PutTeamMatchesPitStatusByeventKeyByteamKey200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TeamMatch"
+      example:
+        success: true
+    PutTeamMatchesPitStatusByeventKeyByteamNumber200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/TeamMatch"
+      example:
+        success: true
+    GetScoutifyUserMe200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    GetScoutifyUserMeAndroidDevice200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PatchScoutifyUserMeAndroidDevice200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    GetScoutifyGameMatchups200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            type: object
+      example:
+        success: true
+    GetScoutifyGameDetails200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            type: object
+      example:
+        success: true
+    GetScoutifyGameComments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: array
+          items:
+            type: object
+      example:
+        success: true
+    PostScoutifyGameComments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    GetScoutifyEventAssignments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    GetScoutifyEventTasks200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PatchScoutifyAdminUsersByteamNumberByscoutifyUserIdAndroidDevice200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PostScoutifyAdminGameDetails200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PutScoutifyAdminGameDetails200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    DeleteScoutifyAdminGameDetails200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PostScoutifyAdminEventAssignments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    DeleteScoutifyAdminEventAssignments200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PostScoutifyAdminEventTasks200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    PutScoutifyAdminEventTasksBytaskId200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    DeleteScoutifyAdminEventTasksBytaskId200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+      example:
+        success: true
+    GetInfoEndpoints200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+            endpoints:
+              type: array
+              items:
+                $ref: "#/components/schemas/EndpointInfo"
+            tags:
+              type: array
+              items:
+                type: string
+            lastUpdated:
+              type: string
+              format: date-time
+      example:
+        success: true
+    GetInfoEndpointsByTagBytag200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          type: object
+          properties:
+            tag:
+              type: string
+            total:
+              type: integer
+            endpoints:
+              type: array
+              items:
+                $ref: "#/components/schemas/EndpointInfo"
+            lastUpdated:
+              type: string
+              format: date-time
+      example:
+        success: true
+    GetInfoApiInfo200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/ApiInfo"
+      example:
+        success: true
+    GetInfoStatus200SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
+          $ref: "#/components/schemas/ServiceStatus"
+      example:
+        success: true
 paths:
   /auth/callback:
     post:
@@ -1338,12 +2270,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TokenResponse"
+                $ref: "#/components/schemas/PostAuthCallback200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1385,12 +2312,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/DecodedToken"
+                $ref: "#/components/schemas/GetAuthUserInfo200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1444,12 +2366,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/UserInfo"
+                $ref: "#/components/schemas/GetAuthMe200SuccessResponse"
         "401":
           description: Unauthorized - Token format is invalid or missing
           content:
@@ -1508,24 +2425,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          valid:
-                            type: boolean
-                          isAdmin:
-                            type: boolean
-                          tokenStatus:
-                            type: string
-                            enum:
-                              - active
-                          fromCache:
-                            type: boolean
-                            description: Indicates if the result came from cache
+                $ref: "#/components/schemas/GetAuthValidate200SuccessResponse"
         "401":
           description: Unauthorized - Token is invalid, expired, or has been revoked on
             the server
@@ -1567,12 +2467,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TokenResponse"
+                $ref: "#/components/schemas/PostAuthRefreshToken200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1612,25 +2507,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
-                            example: Logged out successfully
-                          details:
-                            type: object
-                            properties:
-                              localBlacklist:
-                                type: boolean
-                              casdoorLogout:
-                                type: boolean
-                              casdoorDeleteToken:
-                                type: boolean
+                $ref: "#/components/schemas/PostAuthLogout200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -1681,25 +2558,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
-                            example: Token revoked successfully
-                          details:
-                            type: object
-                            properties:
-                              localBlacklist:
-                                type: boolean
-                              casdoorLogout:
-                                type: boolean
-                              casdoorDeleteToken:
-                                type: boolean
+                $ref: "#/components/schemas/PostAuthRevokeToken200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1786,19 +2645,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          data:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/UserInfo"
-                          total:
-                            type: integer
+                $ref: "#/components/schemas/GetAuthUsers200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1868,25 +2715,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          accessKey:
-                            type: string
-                            description: Generated API access key
-                          accessSecret:
-                            type: string
-                            description: Generated API access secret
-                          userId:
-                            type: string
-                            description: User ID the keys were generated for
-                          message:
-                            type: string
-                            example: API Keys generated successfully
+                $ref: "#/components/schemas/PostAuthApiKeys200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -1949,15 +2778,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
+                $ref: "#/components/schemas/PostFeedback201SuccessResponse"
         "429":
           description: Too many requests
           content:
@@ -2009,12 +2830,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/UploadResponse"
+                $ref: "#/components/schemas/PostUploadUpload200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -2082,15 +2898,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
+                $ref: "#/components/schemas/DeleteUploadImagesByimageId200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2136,12 +2944,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/EventResponse"
+                $ref: "#/components/schemas/GetEventEventId200SuccessResponse"
         "404":
           description: Event not found
           content:
@@ -2195,9 +2998,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TeamResponse"
+                $ref: "#/components/schemas/GetTeamTeams200SuccessResponse"
         "500":
           description: Server error
           content:
@@ -2231,15 +3032,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
+                $ref: "#/components/schemas/PostSurveySubmit200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2294,14 +3087,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/SurveyResponse"
+                $ref: "#/components/schemas/GetSurveyQuery200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2342,18 +3128,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          received:
-                            type: boolean
-                          verification_key:
-                            type: string
-                            description: Only present for verification messages
+                $ref: "#/components/schemas/PostWebhookTba200SuccessResponse"
         "401":
           description: Unauthorized - Invalid HMAC signature
           content:
@@ -2388,12 +3163,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/WebhookStatus"
+                $ref: "#/components/schemas/GetWebhookTbaStatus200SuccessResponse"
         "500":
           description: Server error
           content:
@@ -2427,12 +3197,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TaskAssignment"
+                $ref: "#/components/schemas/PostAssignments200SuccessResponse"
         "400":
           description: Invalid request
           content:
@@ -2506,12 +3271,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TaskAssignment"
+                $ref: "#/components/schemas/PutAssignmentsByid200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2578,15 +3338,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          deleted:
-                            type: boolean
+                $ref: "#/components/schemas/DeleteAssignmentsByid200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2654,14 +3406,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TaskAssignment"
+                $ref: "#/components/schemas/GetAssignmentsEventsByeventKey200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2718,14 +3463,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TaskAssignment"
+                $ref: "#/components/schemas/GetAssignmentsUserByeventKey200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -2768,14 +3506,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/TeamMatch"
+                $ref: "#/components/schemas/GetTeamMatchesEventByeventKey200SuccessResponse"
         "400":
           description: Bad request - Missing event key
           content:
@@ -2840,12 +3571,8 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TeamMatch"
+                $ref: "#/components/schemas/PutTeamMatchesPitStatusByeventKeyByteamKey200Succes\
+                  sResponse"
         "400":
           description: Bad request
           content:
@@ -2932,12 +3659,8 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/TeamMatch"
+                $ref: "#/components/schemas/PutTeamMatchesPitStatusByeventKeyByteamNumber200Suc\
+                  cessResponse"
         "400":
           description: Bad request
           content:
@@ -2999,7 +3722,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyUserMe200SuccessResponse"
         "404":
           description: No Scoutify binding found
           content:
@@ -3039,7 +3762,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyUserMeAndroidDevice200SuccessResponse"
         "404":
           description: No Scoutify binding found
           content:
@@ -3088,7 +3811,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PatchScoutifyUserMeAndroidDevice200SuccessResponse"
         "400":
           description: Bad request
           content:
@@ -3148,7 +3871,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyGameMatchups200SuccessResponse"
         "429":
           description: Too many requests
           content:
@@ -3236,7 +3959,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyGameDetails200SuccessResponse"
         "429":
           description: Too many requests
           content:
@@ -3332,7 +4055,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyGameComments200SuccessResponse"
         "429":
           description: Too many requests
           content:
@@ -3452,7 +4175,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PostScoutifyGameComments200SuccessResponse"
               examples:
                 Created:
                   summary: Comment created successfully
@@ -3577,7 +4300,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyEventAssignments200SuccessResponse"
         "404":
           description: No Scoutify binding found
           content:
@@ -3655,7 +4378,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/GetScoutifyEventTasks200SuccessResponse"
         "404":
           description: No Scoutify binding found
           content:
@@ -3716,7 +4439,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PatchScoutifyAdminUsersByteamNumberByscoutifyUserId\
+                  AndroidDevice200SuccessResponse"
         "400":
           description: Bad request
           content:
@@ -3856,7 +4580,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminGameDetails200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -3957,7 +4681,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PutScoutifyAdminGameDetails200SuccessResponse"
         "400":
           description: Bad request
           content:
@@ -4061,7 +4785,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/DeleteScoutifyAdminGameDetails200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -4149,7 +4873,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminEventAssignments200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -4220,7 +4944,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/DeleteScoutifyAdminEventAssignments200SuccessRespon\
+                  se"
         "401":
           description: Unauthorized
           content:
@@ -4323,7 +5048,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminEventTasks200SuccessResponse"
         "401":
           description: Unauthorized
           content:
@@ -4397,7 +5122,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/PutScoutifyAdminEventTasksBytaskId200SuccessRespons\
+                  e"
         "400":
           description: Bad request
           content:
@@ -4472,7 +5198,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                $ref: "#/components/schemas/DeleteScoutifyAdminEventTasksBytaskId200SuccessResp\
+                  onse"
         "400":
           description: Bad request
           content:
@@ -4553,26 +5280,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          total:
-                            type: integer
-                          endpoints:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/EndpointInfo"
-                          tags:
-                            type: array
-                            items:
-                              type: string
-                          lastUpdated:
-                            type: string
-                            format: date-time
+                $ref: "#/components/schemas/GetInfoEndpoints200SuccessResponse"
         "304":
           description: Not modified, use cached response
         "429":
@@ -4629,24 +5337,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          tag:
-                            type: string
-                          total:
-                            type: integer
-                          endpoints:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/EndpointInfo"
-                          lastUpdated:
-                            type: string
-                            format: date-time
+                $ref: "#/components/schemas/GetInfoEndpointsByTagBytag200SuccessResponse"
         "304":
           description: Not modified, use cached response
         "429":
@@ -4696,12 +5387,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/ApiInfo"
+                $ref: "#/components/schemas/GetInfoApiInfo200SuccessResponse"
         "304":
           description: Not modified, use cached response
         "429":
@@ -4738,12 +5424,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/ServiceStatus"
+                $ref: "#/components/schemas/GetInfoStatus200SuccessResponse"
         "429":
           description: Too many requests
           content:
