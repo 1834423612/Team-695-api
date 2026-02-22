@@ -179,7 +179,7 @@ class ScoutifyController {
                     matches[gm_num].teams.push(row.team_master_tm_number);
                 } else {
                     matches[gm_num] = {
-                        gm_number: gm_num,
+                        gm_number: row.gm_number,
                         gm_game_type: row.gm_game_type,
                         gm_timestamp: row.gm_timestamp,
                         teams: [row.team_master_tm_number],
