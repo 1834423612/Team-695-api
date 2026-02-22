@@ -2233,6 +2233,233 @@ paths:
             type: integer
             default: 0
 
+  /scoutify/game-comments:
+    get:
+      summary: Query Scoutify game comments
+      description: Read records from Scoutify game_comments table with optional filters and pagination. This is a public read-only endpoint.
+      tags:
+        - Scoutify
+      responses:
+        '200':
+          description: Game comment records retrieved
+          headers:
+            RateLimit-Limit:
+              description: Configured request limit for current rate-limit window
+              schema:
+                type: string
+            RateLimit-Remaining:
+              description: Remaining requests in current rate-limit window
+              schema:
+                type: string
+            RateLimit-Reset:
+              description: Seconds until current rate-limit window resets
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                TooManyRequests:
+                  summary: Rate limit exceeded
+                  value:
+                    success: false
+                    message: Too many requests, please try again later.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                QueryFailed:
+                  summary: Query game comments failed
+                  value:
+                    success: false
+                    message: Failed to query game comments
+      parameters:
+        - in: query
+          name: smYear
+          schema:
+            type: integer
+        - in: query
+          name: eventCode
+          schema:
+            type: string
+        - in: query
+          name: gameType
+          schema:
+            type: string
+        - in: query
+          name: gameNumber
+          schema:
+            type: integer
+        - in: query
+          name: alliance
+          schema:
+            type: string
+        - in: query
+          name: alliancePosition
+          schema:
+            type: integer
+        - in: query
+          name: scoutifyUserId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+    post:
+      summary: Create Scoutify game comment
+      description: Create a game_comments record for a specific match alliance position. gc_um_id is resolved from current authenticated Scoutify binding, and gc_comment is automatically sanitized into a safe format before persistence.
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - frc_season_master_sm_year
+                - competition_master_cm_event_code
+                - game_matchup_gm_game_type
+                - game_matchup_gm_number
+                - game_matchup_gm_alliance
+                - game_matchup_gm_alliance_position
+                - gc_comment
+              properties:
+                frc_season_master_sm_year:
+                  type: integer
+                  description: Season year
+                competition_master_cm_event_code:
+                  type: string
+                  description: Event code (e.g., ohcl)
+                game_matchup_gm_game_type:
+                  type: string
+                  description: Game type (e.g., Q)
+                game_matchup_gm_number:
+                  type: integer
+                  description: Match number
+                game_matchup_gm_alliance:
+                  type: string
+                  description: Alliance code (e.g., R or B)
+                game_matchup_gm_alliance_position:
+                  type: integer
+                  description: Alliance position (1-3)
+                gc_comment:
+                  type: string
+                  maxLength: 200
+                  description: Comment text. Special symbols and unsafe control characters are normalized/sanitized by backend.
+      responses:
+        '200':
+          description: Game comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                Created:
+                  summary: Comment created successfully
+                  value:
+                    success: true
+                    message: Game comment created
+                    data:
+                      frc_season_master_sm_year: 2025
+                      competition_master_cm_event_code: ohcl
+                      game_matchup_gm_game_type: Q
+                      game_matchup_gm_number: 74
+                      game_matchup_gm_alliance: R
+                      game_matchup_gm_alliance_position: 2
+                      gc_comment: Spent entire game trying to score algae in processor
+                      gc_um_id: ethand
+                      gc_ts: "2025-04-05 13:47:47.382000"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                MissingFields:
+                  summary: Missing required fields
+                  value:
+                    success: false
+                    message: Missing required fields for game comment
+                InvalidNumericFields:
+                  summary: Invalid numeric fields
+                  value:
+                    success: false
+                    message: Invalid numeric fields for game comment
+                EmptyComment:
+                  summary: Empty comment after trim/sanitize
+                  value:
+                    success: false
+                    message: gc_comment is required
+                CommentTooLong:
+                  summary: Comment too long after sanitization
+                  value:
+                    success: false
+                    message: gc_comment must be 200 characters or fewer after sanitization
+                InvalidJsonPayload:
+                  summary: Malformed JSON body
+                  value:
+                    success: false
+                    message: Invalid JSON payload
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                MissingOrInvalidToken:
+                  summary: Missing or invalid access token
+                  value:
+                    success: false
+                    message: Unauthorized
+        '404':
+          description: No Scoutify binding found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                UserBindingNotFound:
+                  summary: No mapped Scoutify user
+                  value:
+                    success: false
+                    message: No Scoutify user binding found for current Casdoor user
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                CreateFailed:
+                  summary: Create game comment failed
+                  value:
+                    success: false
+                    message: Failed to create game comment
+
   /scoutify/event-assignments:
     get:
       summary: Query current user event assignments

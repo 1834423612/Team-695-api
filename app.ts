@@ -224,6 +224,14 @@ app.get("/health", async (req, res) => {
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid JSON payload',
+            error: process.env.NODE_ENV === 'production' ? undefined : err.message,
+        })
+    }
+
     console.error(err.stack)
     res.status(500).json({
         success: false,

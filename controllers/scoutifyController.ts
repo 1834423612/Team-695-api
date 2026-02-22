@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import scoutifyService from '../services/scoutifyService';
 import { success, error } from '../utils/responses';
+import { sanitizeGameComment } from '../utils/sanitizeText';
 
 class ScoutifyController {
     async getCurrentUserBinding(req: Request, res: Response) {
@@ -114,6 +115,88 @@ class ScoutifyController {
             return success(res, rows);
         } catch (err) {
             return error(res, 500, 'Failed to query game details', err);
+        }
+    }
+
+    async getGameComments(req: Request, res: Response) {
+        try {
+            const rows = await scoutifyService.listGameComments(
+                {
+                    frc_season_master_sm_year: req.query.smYear as string,
+                    competition_master_cm_event_code: req.query.eventCode as string,
+                    game_matchup_gm_game_type: req.query.gameType as string,
+                    game_matchup_gm_number: req.query.gameNumber as string,
+                    game_matchup_gm_alliance: req.query.alliance as string,
+                    game_matchup_gm_alliance_position: req.query.alliancePosition as string,
+                    gc_um_id: req.query.scoutifyUserId as string,
+                },
+                Number(req.query.limit),
+                Number(req.query.offset),
+            );
+
+            return success(res, rows);
+        } catch (err) {
+            return error(res, 500, 'Failed to query game comments', err);
+        }
+    }
+
+    async createGameComment(req: Request, res: Response) {
+        try {
+            const {
+                frc_season_master_sm_year,
+                competition_master_cm_event_code,
+                game_matchup_gm_game_type,
+                game_matchup_gm_number,
+                game_matchup_gm_alliance,
+                game_matchup_gm_alliance_position,
+                gc_comment,
+            } = req.body;
+
+            if (
+                frc_season_master_sm_year === undefined
+                || !competition_master_cm_event_code
+                || !game_matchup_gm_game_type
+                || game_matchup_gm_number === undefined
+                || !game_matchup_gm_alliance
+                || game_matchup_gm_alliance_position === undefined
+            ) {
+                return error(res, 400, 'Missing required fields for game comment');
+            }
+
+            const smYear = Number(frc_season_master_sm_year);
+            const gameNumber = Number(game_matchup_gm_number);
+            const alliancePosition = Number(game_matchup_gm_alliance_position);
+
+            if (!Number.isFinite(smYear) || !Number.isFinite(gameNumber) || !Number.isFinite(alliancePosition)) {
+                return error(res, 400, 'Invalid numeric fields for game comment');
+            }
+
+            const safeComment = sanitizeGameComment(gc_comment);
+            if (!safeComment) {
+                return error(res, 400, 'gc_comment is required');
+            }
+
+            if (safeComment.length > 200) {
+                return error(res, 400, 'gc_comment must be 200 characters or fewer after sanitization');
+            }
+
+            const created = await scoutifyService.createGameComment(req.user, {
+                frc_season_master_sm_year: smYear,
+                competition_master_cm_event_code: String(competition_master_cm_event_code),
+                game_matchup_gm_game_type: String(game_matchup_gm_game_type),
+                game_matchup_gm_number: gameNumber,
+                game_matchup_gm_alliance: String(game_matchup_gm_alliance),
+                game_matchup_gm_alliance_position: alliancePosition,
+                gc_comment: safeComment,
+            });
+
+            if (!created) {
+                return error(res, 404, 'No Scoutify user binding found for current Casdoor user');
+            }
+
+            return success(res, created, 'Game comment created');
+        } catch (err) {
+            return error(res, 500, 'Failed to create game comment', err);
         }
     }
 

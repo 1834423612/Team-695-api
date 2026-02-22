@@ -13,6 +13,16 @@ interface BoundScoutifyUser {
     um_android_device_id: string | null;
 }
 
+interface CreateGameCommentPayload {
+    frc_season_master_sm_year: number;
+    competition_master_cm_event_code: string;
+    game_matchup_gm_game_type: string;
+    game_matchup_gm_number: number;
+    game_matchup_gm_alliance: string;
+    game_matchup_gm_alliance_position: number;
+    gc_comment: string;
+}
+
 class ScoutifyService {
     private buildPagedQuery(baseSql: string, filters: QueryFilters, orderBy: string, limit?: number, offset?: number) {
         const where: string[] = [];
@@ -176,6 +186,97 @@ class ScoutifyService {
 
         const [rows]: any = await scoutifyPool.query(sql, params);
         return rows;
+    }
+
+    async listGameComments(filters: QueryFilters, limit?: number, offset?: number) {
+        const { sql, params } = this.buildPagedQuery(
+            `SELECT
+                frc_season_master_sm_year,
+                competition_master_cm_event_code,
+                game_matchup_gm_game_type,
+                game_matchup_gm_number,
+                game_matchup_gm_alliance,
+                game_matchup_gm_alliance_position,
+                gc_comment,
+                gc_um_id,
+                gc_ts
+             FROM game_comments`,
+            filters,
+            'game_matchup_gm_number ASC, game_matchup_gm_alliance ASC, game_matchup_gm_alliance_position ASC, gc_ts DESC',
+            limit,
+            offset,
+        );
+
+        const [rows]: any = await scoutifyPool.query(sql, params);
+        return rows;
+    }
+
+    async createGameComment(authUser: any, payload: CreateGameCommentPayload) {
+        const boundUser = await this.findBoundUser(authUser);
+        if (!boundUser) {
+            return null;
+        }
+
+        await scoutifyPool.query(
+            `INSERT INTO game_comments (
+                frc_season_master_sm_year,
+                competition_master_cm_event_code,
+                game_matchup_gm_game_type,
+                game_matchup_gm_number,
+                game_matchup_gm_alliance,
+                game_matchup_gm_alliance_position,
+                gc_comment,
+                gc_um_id,
+                gc_ts
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, DATE_FORMAT(UTC_TIMESTAMP(3), '%Y-%m-%d %H:%i:%s.%f'))`,
+            [
+                payload.frc_season_master_sm_year,
+                payload.competition_master_cm_event_code,
+                payload.game_matchup_gm_game_type,
+                payload.game_matchup_gm_number,
+                payload.game_matchup_gm_alliance,
+                payload.game_matchup_gm_alliance_position,
+                payload.gc_comment,
+                boundUser.um_id,
+            ],
+        );
+
+        const [rows]: any = await scoutifyPool.query(
+            `SELECT
+                frc_season_master_sm_year,
+                competition_master_cm_event_code,
+                game_matchup_gm_game_type,
+                game_matchup_gm_number,
+                game_matchup_gm_alliance,
+                game_matchup_gm_alliance_position,
+                gc_comment,
+                gc_um_id,
+                gc_ts
+             FROM game_comments
+             WHERE frc_season_master_sm_year = ?
+               AND competition_master_cm_event_code = ?
+               AND game_matchup_gm_game_type = ?
+               AND game_matchup_gm_number = ?
+               AND game_matchup_gm_alliance = ?
+               AND game_matchup_gm_alliance_position = ?
+               AND gc_um_id = ?
+             ORDER BY gc_ts DESC
+             LIMIT 1`,
+            [
+                payload.frc_season_master_sm_year,
+                payload.competition_master_cm_event_code,
+                payload.game_matchup_gm_game_type,
+                payload.game_matchup_gm_number,
+                payload.game_matchup_gm_alliance,
+                payload.game_matchup_gm_alliance_position,
+                boundUser.um_id,
+            ],
+        );
+
+        return rows?.[0] || {
+            ...payload,
+            gc_um_id: boundUser.um_id,
+        };
     }
 
     async listEventAssignments(authUser: any, filters: QueryFilters, limit?: number, offset?: number) {
