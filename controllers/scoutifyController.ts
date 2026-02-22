@@ -172,13 +172,14 @@ class ScoutifyController {
 
             for (const row of rows) {
                 const positionKey = row.gm_alliance + row.gm_alliance_position;
+                const gm_num = row.gm_number - 1
 
-                if (matches[row.gm_number]) {
-                    matches[row.gm_number][positionKey] = row.team_master_tm_number;
-                    matches[row.gm_number].teams.push(row.team_master_tm_number);
+                if (matches[gm_num]) {
+                    matches[gm_num][positionKey] = row.team_master_tm_number;
+                    matches[gm_num].teams.push(row.team_master_tm_number);
                 } else {
-                    matches[row.gm_number] = {
-                        gm_number: row.gm_number,
+                    matches[gm_num] = {
+                        gm_number: gm_num,
                         gm_game_type: row.gm_game_type,
                         gm_timestamp: row.gm_timestamp,
                         teams: [row.team_master_tm_number],
