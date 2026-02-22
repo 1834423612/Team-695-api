@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import scoutifyService from '../services/scoutifyService';
 import { success, error } from '../utils/responses';
 import { sanitizeGameComment } from '../utils/sanitizeText';
+import { match } from 'assert';
 
 class ScoutifyController {
     constructor() {
@@ -186,7 +187,7 @@ class ScoutifyController {
                 }
             }
 
-            return success(res, rows);
+            return success(res, matches);
         } catch (err) {
             return error(res, 500, 'Failed to query game matchups', err);
         }

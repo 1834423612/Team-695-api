@@ -1978,10 +1978,49 @@ components:
           type: array
           items:
             type: object
+            properties:
+              gm_number:
+                type: integer
+                description: Game match number
+              gm_game_type:
+                type: string
+                description: Game type (e.g., Q for qualification, P for playoff)
+              gm_timestamp:
+                type: string
+                format: date-time
+                description: Timestamp of the game match
+              teams:
+                type: array
+                items:
+                  type: integer
+                description: Array of team numbers in this match
+            additionalProperties:
+              type: integer
+              description: Position keys (e.g., R1, R2, R3, B1, B2, B3) mapped to team numbers
       example:
         success: true
         message: Request completed successfully
-        data: []
+        data:
+          - gm_number: 74
+            gm_game_type: Q
+            gm_timestamp: 2025-04-05T13:40:21.000000Z
+            teams: [695, 2481, 4099]
+            R1: 695
+            R2: 2481
+            R3: 4099
+            B1: 254
+            B2: 3128
+            B3: 1661
+          - gm_number: 75
+            gm_game_type: Q
+            gm_timestamp: 2025-04-05T13:55:30.000000Z
+            teams: [254, 3128, 1661]
+            R1: 254
+            R2: 3128
+            R3: 1661
+            B1: 695
+            B2: 2481
+            B3: 4099
     GetScoutifyGameDetailsSuccess:
       type: object
       required:
@@ -4057,15 +4096,22 @@ paths:
                   value:
                     success: true
                     data:
-                      - frc_season_master_sm_year: 2025
-                        competition_master_cm_event_code: ohcl
+                      - gm_number: 74
                         gm_game_type: Q
-                        gm_number: 74
-                        gm_alliance: R
-                        gm_alliance_position: 2
-                        team_master_tm_number: 695
-                        gm_value: 1
-                        gm_timestamp: 2025-04-05 13:40:21.000000
+                        gm_timestamp: 2025-04-05T13:40:21.000000Z
+                        teams:
+                          - 695
+                          - 2481
+                          - 4099
+                          - 254
+                          - 3128
+                          - 1661
+                        R1: 695
+                        R2: 2481
+                        R3: 4099
+                        B1: 254
+                        B2: 3128
+                        B3: 1661
         "429":
           description: Too many requests
           content:
