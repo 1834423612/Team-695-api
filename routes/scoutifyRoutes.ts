@@ -18,6 +18,7 @@ router.get('/event-assignments', verifyToken, scoutifyController.getEventAssignm
 router.get('/event-tasks', verifyToken, scoutifyController.getEventTasks);
 
 router.patch('/admin/users/:teamNumber/:scoutifyUserId/android-device', verifyToken, requireAdmin, scoutifyController.adminUpdateAndroidDeviceBinding);
+router.patch('/admin/users/:teamNumber/by-username/:scoutifyUsername/android-device', verifyToken, requireAdmin, scoutifyController.adminUpdateAndroidDeviceBindingByUsername);
 
 router.post('/admin/game-details', verifyToken, requireAdmin, scoutifyController.createGameDetail);
 router.put('/admin/game-details', verifyToken, requireAdmin, scoutifyController.updateGameDetail);

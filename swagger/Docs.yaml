@@ -501,8 +501,30 @@ x-error-catalog:
         "500":
           - Failed to update Android device binding
           - Failed to verify admin privileges
+    /scoutify/admin/users/{teamNumber}/by-username/{scoutifyUsername}/android-device:
+      patch:
+        "400":
+          - teamNumber and scoutifyUsername are required
+          - androidDeviceId must be a string or null
+          - Invalid JSON payload
+        "401":
+          - No authentication token provided
+          - Token has been revoked
+          - Token is invalid or has been revoked
+          - Token has expired
+          - Token validation failed
+          - Failed to verify token
+        "403":
+          - Admin privileges required
+        "404":
+          - Scoutify user not found
+        "500":
+          - Failed to update Android device binding
+          - Failed to verify admin privileges
     /scoutify/admin/game-details:
       post:
+        "404":
+          - Scoutify user not found by username
         "401":
           - No authentication token provided
           - Token has been revoked
@@ -529,6 +551,7 @@ x-error-catalog:
         "403":
           - Admin privileges required
         "404":
+          - Scoutify user not found by username
           - No game detail row updated
         "500":
           - Failed to update game detail
@@ -544,12 +567,15 @@ x-error-catalog:
         "403":
           - Admin privileges required
         "404":
+          - Scoutify user not found by username
           - No game detail row deleted
         "500":
           - Failed to delete game detail
           - Failed to verify admin privileges
     /scoutify/admin/event-assignments:
       post:
+        "404":
+          - Scoutify user not found by username
         "401":
           - No authentication token provided
           - Token has been revoked
@@ -573,12 +599,15 @@ x-error-catalog:
         "403":
           - Admin privileges required
         "404":
+          - Scoutify user not found by username
           - No event assignment row deleted
         "500":
           - Failed to delete event assignment
           - Failed to verify admin privileges
     /scoutify/admin/event-tasks:
       post:
+        "404":
+          - Scoutify user not found by username
         "401":
           - No authentication token provided
           - Token has been revoked
@@ -4114,6 +4143,16 @@ paths:
           schema:
             type: string
         - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Scoutify username (user_master.um_name). If provided and scoutifyUserId is absent, backend resolves to gd_um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used together with scoutifyUsername to avoid cross-team ambiguity.
+        - in: query
           name: limit
           schema:
             type: integer
@@ -4203,6 +4242,16 @@ paths:
           name: scoutifyUserId
           schema:
             type: string
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Scoutify username (user_master.um_name). If provided and scoutifyUserId is absent, backend resolves to gc_um_id.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used together with scoutifyUsername to avoid cross-team ambiguity.
         - in: query
           name: limit
           schema:
@@ -4602,6 +4651,102 @@ paths:
                   value:
                     success: false
                     message: Failed to verify admin privileges
+  /scoutify/admin/users/{teamNumber}/by-username/{scoutifyUsername}/android-device:
+    patch:
+      summary: Admin update Android device binding by username
+      description: Admin-only endpoint to update or clear a Scoutify user's user_master.um_android_device_id via user_master.um_name
+      tags:
+        - Scoutify
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
+      parameters:
+        - in: path
+          name: teamNumber
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: scoutifyUsername
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                androidDeviceId:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Android device binding updated by admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatchScoutifyAdminUsersByTeamNoByScoutUserAndroidDevSuccess"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                MissingPathFields:
+                  value:
+                    success: false
+                    message: teamNumber and scoutifyUsername are required
+                InvalidAndroidDeviceType:
+                  value:
+                    success: false
+                    message: androidDeviceId must be a string or null
+                InvalidJsonPayload:
+                  value:
+                    success: false
+                    message: Invalid JSON payload
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                MissingAuthToken:
+                  value:
+                    success: false
+                    message: No authentication token provided
+        "403":
+          description: Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                NotAdmin:
+                  value:
+                    success: false
+                    message: Admin privileges required
+        "404":
+          description: Scoutify user not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                ScoutifyUserNotFound:
+                  value:
+                    success: false
+                    message: Scoutify user not found
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
   /scoutify/admin/game-details:
     post:
       summary: Admin create game detail
@@ -4626,7 +4771,6 @@ paths:
                 - game_element_group_geg_grp_key
                 - game_element_ge_key
                 - gd_value
-                - gd_um_id
               properties:
                 frc_season_master_sm_year:
                   type: integer
@@ -4660,7 +4804,13 @@ paths:
                   description: Scored value
                 gd_um_id:
                   type: string
-                  description: Scoutify user ID who scored
+                  description: Scoutify user ID who scored. Provide this or gd_um_name.
+                gd_um_name:
+                  type: string
+                  description: Scoutify username (user_master.um_name). Used to resolve gd_um_id when gd_um_id is not provided.
+                user_tm_number:
+                  type: integer
+                  description: Optional team number to disambiguate gd_um_name resolution.
                 gd_score:
                   type: number
                   description: Optional score adjustment
@@ -4736,7 +4886,6 @@ paths:
                     - game_matchup_gm_alliance_position
                     - game_element_group_geg_grp_key
                     - game_element_ge_key
-                    - gd_um_id
                   properties:
                     frc_season_master_sm_year:
                       type: integer
@@ -4756,6 +4905,10 @@ paths:
                       type: integer
                     gd_um_id:
                       type: string
+                    gd_um_name:
+                      type: string
+                    user_tm_number:
+                      type: integer
                 changes:
                   type: object
                   properties:
@@ -4853,7 +5006,6 @@ paths:
                 - game_matchup_gm_alliance_position
                 - game_element_group_geg_grp_key
                 - game_element_ge_key
-                - gd_um_id
               properties:
                 frc_season_master_sm_year:
                   type: integer
@@ -4873,6 +5025,10 @@ paths:
                   type: integer
                 gd_um_id:
                   type: string
+                gd_um_name:
+                  type: string
+                user_tm_number:
+                  type: integer
       responses:
         "200":
           description: Game detail deleted
@@ -4943,7 +5099,6 @@ paths:
                 - sm_year
                 - cm_event_code
                 - tm_number
-                - um_id
                 - user_tm_number
               properties:
                 sm_year:
@@ -4957,7 +5112,10 @@ paths:
                   description: Team number being assigned
                 um_id:
                   type: string
-                  description: Scoutify user ID
+                  description: Scoutify user ID. Provide this or um_name.
+                um_name:
+                  type: string
+                  description: Scoutify username (user_master.um_name). Used to resolve um_id when um_id is not provided.
                 user_tm_number:
                   type: integer
                   description: User's team number
@@ -5018,7 +5176,6 @@ paths:
                 - sm_year
                 - cm_event_code
                 - tm_number
-                - um_id
               properties:
                 sm_year:
                   type: integer
@@ -5031,7 +5188,13 @@ paths:
                   description: Team number
                 um_id:
                   type: string
-                  description: Scoutify user ID
+                  description: Scoutify user ID. Provide this or um_name.
+                um_name:
+                  type: string
+                  description: Scoutify username (user_master.um_name). Used to resolve um_id when um_id is not provided.
+                user_tm_number:
+                  type: integer
+                  description: Optional team number to disambiguate um_name resolution.
       responses:
         "200":
           description: Event assignment deleted
@@ -5101,7 +5264,6 @@ paths:
                 - sm_year
                 - cm_event_code
                 - tm_number
-                - um_id
                 - user_tm_number
                 - gm_number
                 - checkin_task
@@ -5117,7 +5279,10 @@ paths:
                   description: Target team number
                 um_id:
                   type: string
-                  description: Scoutify user ID
+                  description: Scoutify user ID. Provide this or um_name.
+                um_name:
+                  type: string
+                  description: Scoutify username (user_master.um_name). Used to resolve um_id when um_id is not provided.
                 user_tm_number:
                   type: integer
                   description: User's team number

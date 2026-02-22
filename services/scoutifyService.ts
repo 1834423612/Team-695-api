@@ -24,6 +24,60 @@ interface CreateGameCommentPayload {
 }
 
 class ScoutifyService {
+    private normalizeString(value?: string | null) {
+        if (typeof value !== 'string') {
+            return null;
+        }
+        const trimmed = value.trim();
+        return trimmed ? trimmed : null;
+    }
+
+    private async findUserByUsername(username: string, teamNumber?: number): Promise<BoundScoutifyUser | null> {
+        const normalizedUsername = this.normalizeString(username);
+        if (!normalizedUsername) {
+            return null;
+        }
+
+        const teamNumberFilter = Number(teamNumber);
+        if (Number.isFinite(teamNumberFilter) && teamNumberFilter > 0) {
+            const [rows]: any = await scoutifyPool.query(
+                `SELECT
+                    team_master_tm_number,
+                    um_id,
+                    um_name,
+                    um_email,
+                    um_active,
+                    um_admin_f,
+                    um_casdoor_userid,
+                    um_android_device_id
+                 FROM user_master
+                 WHERE um_name = ? AND team_master_tm_number = ?
+                 LIMIT 1`,
+                [normalizedUsername, teamNumberFilter],
+            );
+
+            return rows?.[0] || null;
+        }
+
+        const [rows]: any = await scoutifyPool.query(
+            `SELECT
+                team_master_tm_number,
+                um_id,
+                um_name,
+                um_email,
+                um_active,
+                um_admin_f,
+                um_casdoor_userid,
+                um_android_device_id
+             FROM user_master
+             WHERE um_name = ?
+             LIMIT 1`,
+            [normalizedUsername],
+        );
+
+        return rows?.[0] || null;
+    }
+
     private buildPagedQuery(baseSql: string, filters: QueryFilters, orderBy: string, limit?: number, offset?: number) {
         const where: string[] = [];
         const params: Array<string | number> = [];
@@ -75,7 +129,27 @@ class ScoutifyService {
             [candidates],
         );
 
-        return rows?.[0] || null;
+        if (rows?.[0]) {
+            return rows[0];
+        }
+
+        const [fallbackRows]: any = await scoutifyPool.query(
+            `SELECT
+                team_master_tm_number,
+                um_id,
+                um_name,
+                um_email,
+                um_active,
+                um_admin_f,
+                um_casdoor_userid,
+                um_android_device_id
+             FROM user_master
+             WHERE um_name IN (?)
+             LIMIT 1`,
+            [candidates],
+        );
+
+        return fallbackRows?.[0] || null;
     }
 
     async getCurrentBoundUser(authUser: any) {
@@ -137,6 +211,33 @@ class ScoutifyService {
         );
 
         return rows?.[0] || null;
+    }
+
+    async getUserBindingByUsername(username: string, teamNumber?: number) {
+        return this.findUserByUsername(username, teamNumber);
+    }
+
+    async updateAndroidDeviceBindingByAdminUsingUsername(teamNumber: number, scoutifyUsername: string, androidDeviceId: string | null) {
+        const boundUser = await this.findUserByUsername(scoutifyUsername, teamNumber);
+        if (!boundUser) {
+            return null;
+        }
+
+        return this.updateAndroidDeviceBindingByAdmin(
+            boundUser.team_master_tm_number,
+            boundUser.um_id,
+            androidDeviceId,
+        );
+    }
+
+    async resolveScoutifyUserIdByUsername(username?: string, teamNumber?: number) {
+        const normalizedUsername = this.normalizeString(username);
+        if (!normalizedUsername) {
+            return null;
+        }
+
+        const user = await this.findUserByUsername(normalizedUsername, teamNumber);
+        return user?.um_id || null;
     }
 
     async listGameMatchups(filters: QueryFilters, limit?: number, offset?: number) {

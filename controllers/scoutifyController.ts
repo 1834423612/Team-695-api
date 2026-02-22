@@ -72,6 +72,31 @@ class ScoutifyController {
         }
     }
 
+    async adminUpdateAndroidDeviceBindingByUsername(req: Request, res: Response) {
+        try {
+            const teamNumber = Number(req.params.teamNumber);
+            const scoutifyUsername = req.params.scoutifyUsername;
+            const androidDeviceId = req.body.androidDeviceId ?? null;
+
+            if (!teamNumber || !scoutifyUsername) {
+                return error(res, 400, 'teamNumber and scoutifyUsername are required');
+            }
+
+            if (androidDeviceId !== null && typeof androidDeviceId !== 'string') {
+                return error(res, 400, 'androidDeviceId must be a string or null');
+            }
+
+            const updated = await scoutifyService.updateAndroidDeviceBindingByAdminUsingUsername(teamNumber, scoutifyUsername, androidDeviceId);
+            if (!updated) {
+                return error(res, 404, 'Scoutify user not found');
+            }
+
+            return success(res, updated, 'Android device binding updated by admin');
+        } catch (err) {
+            return error(res, 500, 'Failed to update Android device binding', err);
+        }
+    }
+
     async getGameMatchups(req: Request, res: Response) {
         try {
             const rows = await scoutifyService.listGameMatchups(
@@ -96,6 +121,23 @@ class ScoutifyController {
 
     async getGameDetails(req: Request, res: Response) {
         try {
+            let scoutifyUserId = req.query.scoutifyUserId as string;
+            const scoutifyUsername = req.query.scoutifyUsername as string;
+            const scoutifyUserTeamNumber = req.query.scoutifyUserTeamNumber as string;
+
+            if (!scoutifyUserId && scoutifyUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scoutifyUsername,
+                    Number(scoutifyUserTeamNumber),
+                );
+
+                if (!resolvedScoutifyUserId) {
+                    return success(res, []);
+                }
+
+                scoutifyUserId = resolvedScoutifyUserId;
+            }
+
             const rows = await scoutifyService.listGameDetails(
                 {
                     frc_season_master_sm_year: req.query.smYear as string,
@@ -106,7 +148,7 @@ class ScoutifyController {
                     game_matchup_gm_alliance_position: req.query.alliancePosition as string,
                     game_element_group_geg_grp_key: req.query.elementGroupKey as string,
                     game_element_ge_key: req.query.elementKey as string,
-                    gd_um_id: req.query.scoutifyUserId as string,
+                    gd_um_id: scoutifyUserId,
                 },
                 Number(req.query.limit),
                 Number(req.query.offset),
@@ -120,6 +162,23 @@ class ScoutifyController {
 
     async getGameComments(req: Request, res: Response) {
         try {
+            let scoutifyUserId = req.query.scoutifyUserId as string;
+            const scoutifyUsername = req.query.scoutifyUsername as string;
+            const scoutifyUserTeamNumber = req.query.scoutifyUserTeamNumber as string;
+
+            if (!scoutifyUserId && scoutifyUsername) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    scoutifyUsername,
+                    Number(scoutifyUserTeamNumber),
+                );
+
+                if (!resolvedScoutifyUserId) {
+                    return success(res, []);
+                }
+
+                scoutifyUserId = resolvedScoutifyUserId;
+            }
+
             const rows = await scoutifyService.listGameComments(
                 {
                     frc_season_master_sm_year: req.query.smYear as string,
@@ -128,7 +187,7 @@ class ScoutifyController {
                     game_matchup_gm_number: req.query.gameNumber as string,
                     game_matchup_gm_alliance: req.query.alliance as string,
                     game_matchup_gm_alliance_position: req.query.alliancePosition as string,
-                    gc_um_id: req.query.scoutifyUserId as string,
+                    gc_um_id: scoutifyUserId,
                 },
                 Number(req.query.limit),
                 Number(req.query.offset),
@@ -252,7 +311,18 @@ class ScoutifyController {
 
     async createGameDetail(req: Request, res: Response) {
         try {
-            const payload = req.body;
+            const payload = { ...req.body };
+            if (!payload.gd_um_id && payload.gd_um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(payload.gd_um_name),
+                    Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.gd_um_id = resolvedScoutifyUserId;
+            }
+
             const created = await scoutifyService.createGameDetail(payload);
             return success(res, created, 'Game detail created');
         } catch (err) {
@@ -262,9 +332,21 @@ class ScoutifyController {
 
     async updateGameDetail(req: Request, res: Response) {
         try {
-            const { match, changes } = req.body;
+            const match = { ...(req.body?.match || {}) };
+            const changes = req.body?.changes;
             if (!match || !changes) {
                 return error(res, 400, 'match and changes are required');
+            }
+
+            if (!match.gd_um_id && match.gd_um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(match.gd_um_name),
+                    Number(match.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                match.gd_um_id = resolvedScoutifyUserId;
             }
 
             const result = await scoutifyService.updateGameDetail({ match, changes });
@@ -280,7 +362,19 @@ class ScoutifyController {
 
     async deleteGameDetail(req: Request, res: Response) {
         try {
-            const result = await scoutifyService.deleteGameDetail(req.body);
+            const payload = { ...req.body };
+            if (!payload.gd_um_id && payload.gd_um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(payload.gd_um_name),
+                    Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.gd_um_id = resolvedScoutifyUserId;
+            }
+
+            const result = await scoutifyService.deleteGameDetail(payload);
             if (!result.affectedRows) {
                 return error(res, 404, 'No game detail row deleted');
             }
@@ -293,7 +387,18 @@ class ScoutifyController {
 
     async createEventAssignment(req: Request, res: Response) {
         try {
-            const payload = req.body;
+            const payload = { ...req.body };
+            if (!payload.um_id && payload.um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(payload.um_name),
+                    Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            }
+
             const created = await scoutifyService.createEventAssignment(payload);
             return success(res, created, 'Event assignment created or updated');
         } catch (err) {
@@ -303,7 +408,19 @@ class ScoutifyController {
 
     async deleteEventAssignment(req: Request, res: Response) {
         try {
-            const result = await scoutifyService.deleteEventAssignment(req.body);
+            const payload = { ...req.body };
+            if (!payload.um_id && payload.um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(payload.um_name),
+                    Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            }
+
+            const result = await scoutifyService.deleteEventAssignment(payload);
             if (!result.affectedRows) {
                 return error(res, 404, 'No event assignment row deleted');
             }
@@ -316,7 +433,18 @@ class ScoutifyController {
 
     async createEventTask(req: Request, res: Response) {
         try {
-            const payload = req.body;
+            const payload = { ...req.body };
+            if (!payload.um_id && payload.um_name) {
+                const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
+                    String(payload.um_name),
+                    Number(payload.user_tm_number),
+                );
+                if (!resolvedScoutifyUserId) {
+                    return error(res, 404, 'Scoutify user not found by username');
+                }
+                payload.um_id = resolvedScoutifyUserId;
+            }
+
             const created = await scoutifyService.createEventTask(payload);
             return success(res, created, 'Event task created');
         } catch (err) {
