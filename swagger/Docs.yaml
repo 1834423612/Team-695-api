@@ -1317,7 +1317,7 @@ components:
               type: string
             endpoints:
               type: string
-    PostAuthCallback200SuccessResponse:
+    PostAuthCallbackSuccess:
       type: object
       required:
         - success
@@ -1334,7 +1334,9 @@ components:
           $ref: "#/components/schemas/TokenResponse"
       example:
         success: true
-    GetAuthUserInfo200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetAuthUserInfoSuccess:
       type: object
       required:
         - success
@@ -1351,7 +1353,9 @@ components:
           $ref: "#/components/schemas/DecodedToken"
       example:
         success: true
-    GetAuthMe200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetAuthMeSuccess:
       type: object
       required:
         - success
@@ -1368,7 +1372,9 @@ components:
           $ref: "#/components/schemas/UserInfo"
       example:
         success: true
-    GetAuthValidate200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetAuthValidateSuccess:
       type: object
       required:
         - success
@@ -1397,7 +1403,9 @@ components:
               description: Indicates if the result came from cache
       example:
         success: true
-    PostAuthRefreshToken200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostAuthRefreshTokenSuccess:
       type: object
       required:
         - success
@@ -1414,7 +1422,9 @@ components:
           $ref: "#/components/schemas/TokenResponse"
       example:
         success: true
-    PostAuthLogout200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostAuthLogoutSuccess:
       type: object
       required:
         - success
@@ -1444,7 +1454,9 @@ components:
                   type: boolean
       example:
         success: true
-    PostAuthRevokeToken200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostAuthRevokeTokenSuccess:
       type: object
       required:
         - success
@@ -1474,7 +1486,9 @@ components:
                   type: boolean
       example:
         success: true
-    GetAuthUsers200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetAuthUsersSuccess:
       type: object
       required:
         - success
@@ -1498,7 +1512,9 @@ components:
               type: integer
       example:
         success: true
-    PostAuthApiKeys200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostAuthApiKeysSuccess:
       type: object
       required:
         - success
@@ -1528,7 +1544,9 @@ components:
               example: API Keys generated successfully
       example:
         success: true
-    PostFeedback201SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostFeedback201Success:
       type: object
       required:
         - success
@@ -1548,7 +1566,9 @@ components:
               type: string
       example:
         success: true
-    PostUploadUpload200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostUploadUploadSuccess:
       type: object
       required:
         - success
@@ -1565,7 +1585,9 @@ components:
           $ref: "#/components/schemas/UploadResponse"
       example:
         success: true
-    DeleteUploadImagesByimageId200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    DeleteUploadImagesByImageIdSuccess:
       type: object
       required:
         - success
@@ -1585,7 +1607,9 @@ components:
               type: string
       example:
         success: true
-    GetEventEventId200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetEventEventIdSuccess:
       type: object
       required:
         - success
@@ -1602,7 +1626,9 @@ components:
           $ref: "#/components/schemas/EventResponse"
       example:
         success: true
-    GetTeamTeams200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetTeamTeamsSuccess:
       type: object
       required:
         - success
@@ -1619,7 +1645,9 @@ components:
           type: object
       example:
         success: true
-    PostSurveySubmit200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostSurveySubmitSuccess:
       type: object
       required:
         - success
@@ -1639,7 +1667,9 @@ components:
               type: string
       example:
         success: true
-    GetSurveyQuery200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetSurveyQuerySuccess:
       type: object
       required:
         - success
@@ -1658,7 +1688,9 @@ components:
             $ref: "#/components/schemas/SurveyResponse"
       example:
         success: true
-    PostWebhookTba200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    PostWebhookTbaSuccess:
       type: object
       required:
         - success
@@ -1681,7 +1713,9 @@ components:
               description: Only present for verification messages
       example:
         success: true
-    GetWebhookTbaStatus200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetWebhookTbaStatusSuccess:
       type: object
       required:
         - success
@@ -1698,7 +1732,9 @@ components:
           $ref: "#/components/schemas/WebhookStatus"
       example:
         success: true
-    PostAssignments200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostAssignmentsSuccess:
       type: object
       required:
         - success
@@ -1715,7 +1751,9 @@ components:
           $ref: "#/components/schemas/TaskAssignment"
       example:
         success: true
-    PutAssignmentsByid200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PutAssignmentsByIdSuccess:
       type: object
       required:
         - success
@@ -1732,7 +1770,9 @@ components:
           $ref: "#/components/schemas/TaskAssignment"
       example:
         success: true
-    DeleteAssignmentsByid200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    DeleteAssignmentsByIdSuccess:
       type: object
       required:
         - success
@@ -1752,7 +1792,9 @@ components:
               type: boolean
       example:
         success: true
-    GetAssignmentsEventsByeventKey200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetAssignmentsEventsByEventSuccess:
       type: object
       required:
         - success
@@ -1771,7 +1813,9 @@ components:
             $ref: "#/components/schemas/TaskAssignment"
       example:
         success: true
-    GetAssignmentsUserByeventKey200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    GetAssignmentsUserByEventSuccess:
       type: object
       required:
         - success
@@ -1790,7 +1834,9 @@ components:
             $ref: "#/components/schemas/TaskAssignment"
       example:
         success: true
-    GetTeamMatchesEventByeventKey200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    GetTeamMatchesEventByEventSuccess:
       type: object
       required:
         - success
@@ -1809,7 +1855,9 @@ components:
             $ref: "#/components/schemas/TeamMatch"
       example:
         success: true
-    PutTeamMatchesPitStatusByeventKeyByteamKey200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    PutTeamMatchesPitStatusByEventByTeamKeySuccess:
       type: object
       required:
         - success
@@ -1826,7 +1874,9 @@ components:
           $ref: "#/components/schemas/TeamMatch"
       example:
         success: true
-    PutTeamMatchesPitStatusByeventKeyByteamNumber200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PutTeamMatchesPitStatusByEventByTeamNoSuccess:
       type: object
       required:
         - success
@@ -1843,7 +1893,9 @@ components:
           $ref: "#/components/schemas/TeamMatch"
       example:
         success: true
-    GetScoutifyUserMe200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetScoutifyUserMeSuccess:
       type: object
       required:
         - success
@@ -1860,7 +1912,9 @@ components:
           type: object
       example:
         success: true
-    GetScoutifyUserMeAndroidDevice200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetScoutifyUserMeAndroidDevSuccess:
       type: object
       required:
         - success
@@ -1877,7 +1931,9 @@ components:
           type: object
       example:
         success: true
-    PatchScoutifyUserMeAndroidDevice200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PatchScoutifyUserMeAndroidDevSuccess:
       type: object
       required:
         - success
@@ -1894,7 +1950,9 @@ components:
           type: object
       example:
         success: true
-    GetScoutifyGameMatchups200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetScoutifyGameMatchupsSuccess:
       type: object
       required:
         - success
@@ -1913,7 +1971,9 @@ components:
             type: object
       example:
         success: true
-    GetScoutifyGameDetails200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    GetScoutifyGameDetailsSuccess:
       type: object
       required:
         - success
@@ -1932,7 +1992,9 @@ components:
             type: object
       example:
         success: true
-    GetScoutifyGameComments200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    GetScoutifyGameCommentsSuccess:
       type: object
       required:
         - success
@@ -1951,7 +2013,9 @@ components:
             type: object
       example:
         success: true
-    PostScoutifyGameComments200SuccessResponse:
+        message: Request completed successfully
+        data: []
+    PostScoutifyGameCommentsSuccess:
       type: object
       required:
         - success
@@ -1968,7 +2032,9 @@ components:
           type: object
       example:
         success: true
-    GetScoutifyEventAssignments200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetScoutifyEventAssignmentsSuccess:
       type: object
       required:
         - success
@@ -1985,7 +2051,9 @@ components:
           type: object
       example:
         success: true
-    GetScoutifyEventTasks200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetScoutifyEventTasksSuccess:
       type: object
       required:
         - success
@@ -2002,7 +2070,9 @@ components:
           type: object
       example:
         success: true
-    PatchScoutifyAdminUsersByteamNumberByscoutifyUserIdAndroidDevice200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PatchScoutifyAdminUsersByTeamNoByScoutUserAndroidDevSuccess:
       type: object
       required:
         - success
@@ -2019,7 +2089,9 @@ components:
           type: object
       example:
         success: true
-    PostScoutifyAdminGameDetails200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostScoutifyAdminGameDetailsSuccess:
       type: object
       required:
         - success
@@ -2036,7 +2108,9 @@ components:
           type: object
       example:
         success: true
-    PutScoutifyAdminGameDetails200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PutScoutifyAdminGameDetailsSuccess:
       type: object
       required:
         - success
@@ -2053,7 +2127,9 @@ components:
           type: object
       example:
         success: true
-    DeleteScoutifyAdminGameDetails200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    DeleteScoutifyAdminGameDetailsSuccess:
       type: object
       required:
         - success
@@ -2070,7 +2146,9 @@ components:
           type: object
       example:
         success: true
-    PostScoutifyAdminEventAssignments200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostScoutifyAdminEventAssignmentsSuccess:
       type: object
       required:
         - success
@@ -2087,7 +2165,9 @@ components:
           type: object
       example:
         success: true
-    DeleteScoutifyAdminEventAssignments200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    DeleteScoutifyAdminEventAssignmentsSuccess:
       type: object
       required:
         - success
@@ -2104,7 +2184,9 @@ components:
           type: object
       example:
         success: true
-    PostScoutifyAdminEventTasks200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PostScoutifyAdminEventTasksSuccess:
       type: object
       required:
         - success
@@ -2121,7 +2203,9 @@ components:
           type: object
       example:
         success: true
-    PutScoutifyAdminEventTasksBytaskId200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    PutScoutifyAdminEventTasksByTaskSuccess:
       type: object
       required:
         - success
@@ -2138,7 +2222,9 @@ components:
           type: object
       example:
         success: true
-    DeleteScoutifyAdminEventTasksBytaskId200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    DeleteScoutifyAdminEventTasksByTaskSuccess:
       type: object
       required:
         - success
@@ -2155,7 +2241,9 @@ components:
           type: object
       example:
         success: true
-    GetInfoEndpoints200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetInfoEndpointsSuccess:
       type: object
       required:
         - success
@@ -2186,7 +2274,9 @@ components:
               format: date-time
       example:
         success: true
-    GetInfoEndpointsByTagBytag200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetInfoEndpointsByTagByTagSuccess:
       type: object
       required:
         - success
@@ -2215,7 +2305,9 @@ components:
               format: date-time
       example:
         success: true
-    GetInfoApiInfo200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetInfoApiInfoSuccess:
       type: object
       required:
         - success
@@ -2232,7 +2324,9 @@ components:
           $ref: "#/components/schemas/ApiInfo"
       example:
         success: true
-    GetInfoStatus200SuccessResponse:
+        message: Request completed successfully
+        data: {}
+    GetInfoStatusSuccess:
       type: object
       required:
         - success
@@ -2249,6 +2343,8 @@ components:
           $ref: "#/components/schemas/ServiceStatus"
       example:
         success: true
+        message: Request completed successfully
+        data: {}
 paths:
   /auth/callback:
     post:
@@ -2270,7 +2366,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAuthCallback200SuccessResponse"
+                $ref: "#/components/schemas/PostAuthCallbackSuccess"
         "400":
           description: Invalid request
           content:
@@ -2312,7 +2408,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAuthUserInfo200SuccessResponse"
+                $ref: "#/components/schemas/GetAuthUserInfoSuccess"
         "400":
           description: Invalid request
           content:
@@ -2366,7 +2462,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAuthMe200SuccessResponse"
+                $ref: "#/components/schemas/GetAuthMeSuccess"
         "401":
           description: Unauthorized - Token format is invalid or missing
           content:
@@ -2425,7 +2521,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAuthValidate200SuccessResponse"
+                $ref: "#/components/schemas/GetAuthValidateSuccess"
         "401":
           description: Unauthorized - Token is invalid, expired, or has been revoked on
             the server
@@ -2467,7 +2563,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAuthRefreshToken200SuccessResponse"
+                $ref: "#/components/schemas/PostAuthRefreshTokenSuccess"
         "400":
           description: Invalid request
           content:
@@ -2507,7 +2603,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAuthLogout200SuccessResponse"
+                $ref: "#/components/schemas/PostAuthLogoutSuccess"
         "401":
           description: Unauthorized
           content:
@@ -2558,7 +2654,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAuthRevokeToken200SuccessResponse"
+                $ref: "#/components/schemas/PostAuthRevokeTokenSuccess"
         "400":
           description: Invalid request
           content:
@@ -2645,7 +2741,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAuthUsers200SuccessResponse"
+                $ref: "#/components/schemas/GetAuthUsersSuccess"
         "400":
           description: Invalid request
           content:
@@ -2715,7 +2811,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAuthApiKeys200SuccessResponse"
+                $ref: "#/components/schemas/PostAuthApiKeysSuccess"
         "400":
           description: Invalid request
           content:
@@ -2778,7 +2874,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostFeedback201SuccessResponse"
+                $ref: "#/components/schemas/PostFeedback201Success"
         "429":
           description: Too many requests
           content:
@@ -2830,7 +2926,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostUploadUpload200SuccessResponse"
+                $ref: "#/components/schemas/PostUploadUploadSuccess"
         "400":
           description: Invalid request
           content:
@@ -2898,7 +2994,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteUploadImagesByimageId200SuccessResponse"
+                $ref: "#/components/schemas/DeleteUploadImagesByImageIdSuccess"
         "401":
           description: Unauthorized
           content:
@@ -2944,7 +3040,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetEventEventId200SuccessResponse"
+                $ref: "#/components/schemas/GetEventEventIdSuccess"
         "404":
           description: Event not found
           content:
@@ -2998,7 +3094,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTeamTeams200SuccessResponse"
+                $ref: "#/components/schemas/GetTeamTeamsSuccess"
         "500":
           description: Server error
           content:
@@ -3032,7 +3128,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostSurveySubmit200SuccessResponse"
+                $ref: "#/components/schemas/PostSurveySubmitSuccess"
         "401":
           description: Unauthorized
           content:
@@ -3087,7 +3183,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetSurveyQuery200SuccessResponse"
+                $ref: "#/components/schemas/GetSurveyQuerySuccess"
         "401":
           description: Unauthorized
           content:
@@ -3128,7 +3224,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostWebhookTba200SuccessResponse"
+                $ref: "#/components/schemas/PostWebhookTbaSuccess"
         "401":
           description: Unauthorized - Invalid HMAC signature
           content:
@@ -3163,7 +3259,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetWebhookTbaStatus200SuccessResponse"
+                $ref: "#/components/schemas/GetWebhookTbaStatusSuccess"
         "500":
           description: Server error
           content:
@@ -3197,7 +3293,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostAssignments200SuccessResponse"
+                $ref: "#/components/schemas/PostAssignmentsSuccess"
         "400":
           description: Invalid request
           content:
@@ -3271,7 +3367,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PutAssignmentsByid200SuccessResponse"
+                $ref: "#/components/schemas/PutAssignmentsByIdSuccess"
         "401":
           description: Unauthorized
           content:
@@ -3338,7 +3434,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteAssignmentsByid200SuccessResponse"
+                $ref: "#/components/schemas/DeleteAssignmentsByIdSuccess"
         "401":
           description: Unauthorized
           content:
@@ -3406,7 +3502,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAssignmentsEventsByeventKey200SuccessResponse"
+                $ref: "#/components/schemas/GetAssignmentsEventsByEventSuccess"
         "401":
           description: Unauthorized
           content:
@@ -3463,7 +3559,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetAssignmentsUserByeventKey200SuccessResponse"
+                $ref: "#/components/schemas/GetAssignmentsUserByEventSuccess"
         "401":
           description: Unauthorized
           content:
@@ -3506,7 +3602,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetTeamMatchesEventByeventKey200SuccessResponse"
+                $ref: "#/components/schemas/GetTeamMatchesEventByEventSuccess"
         "400":
           description: Bad request - Missing event key
           content:
@@ -3571,8 +3667,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PutTeamMatchesPitStatusByeventKeyByteamKey200Succes\
-                  sResponse"
+                $ref: "#/components/schemas/PutTeamMatchesPitStatusByEventByTeamKeySuccess"
         "400":
           description: Bad request
           content:
@@ -3659,8 +3754,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PutTeamMatchesPitStatusByeventKeyByteamNumber200Suc\
-                  cessResponse"
+                $ref: "#/components/schemas/PutTeamMatchesPitStatusByEventByTeamNoSuccess"
         "400":
           description: Bad request
           content:
@@ -3722,7 +3816,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyUserMe200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyUserMeSuccess"
         "404":
           description: No Scoutify binding found
           content:
@@ -3762,7 +3856,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyUserMeAndroidDevice200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyUserMeAndroidDevSuccess"
         "404":
           description: No Scoutify binding found
           content:
@@ -3811,7 +3905,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PatchScoutifyUserMeAndroidDevice200SuccessResponse"
+                $ref: "#/components/schemas/PatchScoutifyUserMeAndroidDevSuccess"
         "400":
           description: Bad request
           content:
@@ -3871,7 +3965,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyGameMatchups200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyGameMatchupsSuccess"
         "429":
           description: Too many requests
           content:
@@ -3959,7 +4053,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyGameDetails200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyGameDetailsSuccess"
         "429":
           description: Too many requests
           content:
@@ -4055,7 +4149,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyGameComments200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyGameCommentsSuccess"
         "429":
           description: Too many requests
           content:
@@ -4175,7 +4269,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostScoutifyGameComments200SuccessResponse"
+                $ref: "#/components/schemas/PostScoutifyGameCommentsSuccess"
               examples:
                 Created:
                   summary: Comment created successfully
@@ -4300,7 +4394,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyEventAssignments200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyEventAssignmentsSuccess"
         "404":
           description: No Scoutify binding found
           content:
@@ -4378,7 +4472,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetScoutifyEventTasks200SuccessResponse"
+                $ref: "#/components/schemas/GetScoutifyEventTasksSuccess"
         "404":
           description: No Scoutify binding found
           content:
@@ -4439,8 +4533,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PatchScoutifyAdminUsersByteamNumberByscoutifyUserId\
-                  AndroidDevice200SuccessResponse"
+                $ref: "#/components/schemas/PatchScoutifyAdminUsersByTeamNoByScoutUserAndroidDe\
+                  vSuccess"
         "400":
           description: Bad request
           content:
@@ -4580,7 +4674,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostScoutifyAdminGameDetails200SuccessResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminGameDetailsSuccess"
         "401":
           description: Unauthorized
           content:
@@ -4681,7 +4775,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PutScoutifyAdminGameDetails200SuccessResponse"
+                $ref: "#/components/schemas/PutScoutifyAdminGameDetailsSuccess"
         "400":
           description: Bad request
           content:
@@ -4785,7 +4879,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteScoutifyAdminGameDetails200SuccessResponse"
+                $ref: "#/components/schemas/DeleteScoutifyAdminGameDetailsSuccess"
         "401":
           description: Unauthorized
           content:
@@ -4873,7 +4967,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostScoutifyAdminEventAssignments200SuccessResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminEventAssignmentsSuccess"
         "401":
           description: Unauthorized
           content:
@@ -4944,8 +5038,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteScoutifyAdminEventAssignments200SuccessRespon\
-                  se"
+                $ref: "#/components/schemas/DeleteScoutifyAdminEventAssignmentsSuccess"
         "401":
           description: Unauthorized
           content:
@@ -5048,7 +5141,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PostScoutifyAdminEventTasks200SuccessResponse"
+                $ref: "#/components/schemas/PostScoutifyAdminEventTasksSuccess"
         "401":
           description: Unauthorized
           content:
@@ -5122,8 +5215,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PutScoutifyAdminEventTasksBytaskId200SuccessRespons\
-                  e"
+                $ref: "#/components/schemas/PutScoutifyAdminEventTasksByTaskSuccess"
         "400":
           description: Bad request
           content:
@@ -5198,8 +5290,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DeleteScoutifyAdminEventTasksBytaskId200SuccessResp\
-                  onse"
+                $ref: "#/components/schemas/DeleteScoutifyAdminEventTasksByTaskSuccess"
         "400":
           description: Bad request
           content:
@@ -5280,7 +5371,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetInfoEndpoints200SuccessResponse"
+                $ref: "#/components/schemas/GetInfoEndpointsSuccess"
         "304":
           description: Not modified, use cached response
         "429":
@@ -5337,7 +5428,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetInfoEndpointsByTagBytag200SuccessResponse"
+                $ref: "#/components/schemas/GetInfoEndpointsByTagByTagSuccess"
         "304":
           description: Not modified, use cached response
         "429":
@@ -5387,7 +5478,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetInfoApiInfo200SuccessResponse"
+                $ref: "#/components/schemas/GetInfoApiInfoSuccess"
         "304":
           description: Not modified, use cached response
         "429":
@@ -5424,7 +5515,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetInfoStatus200SuccessResponse"
+                $ref: "#/components/schemas/GetInfoStatusSuccess"
         "429":
           description: Too many requests
           content:
