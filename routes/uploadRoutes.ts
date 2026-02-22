@@ -4,7 +4,7 @@ import { requireAdmin } from '../middlewares/auth';
 import { S3Client, PutObjectCommand, ObjectCannedACL, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-import pool from '../config/database'; // Import database connection pool
+import { mainPool as pool } from '../config/database'; // Import database connection pool
 import { verifyToken } from '../middlewares/auth';
 
 dotenv.config();

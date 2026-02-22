@@ -1,4 +1,4 @@
-import scoutifyPool from '../config/scoutifyDatabase';
+import { scoutifyPool } from '../config/scoutifyDatabase';
 
 type QueryFilters = Record<string, string | number | undefined>;
 

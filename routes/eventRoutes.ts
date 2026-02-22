@@ -1,5 +1,6 @@
 import express from 'express';
-import pool from '../config/database';
+import { mainPool as pool } from '../config/database';
+import { getDatabaseClientMessage, getDatabaseHttpStatus } from '../utils/databaseError';
 const router = express.Router();
 
 router.get('/event-id', async (req, res) => {
@@ -15,7 +16,8 @@ router.get('/event-id', async (req, res) => {
         }
     } catch (error) {
         console.error('Error fetching event ID:', error);
-        res.status(500).json({ error: 'Failed to fetch event ID' });
+        const statusCode = getDatabaseHttpStatus(error);
+        res.status(statusCode).json({ error: getDatabaseClientMessage('Failed to fetch event ID', error) });
     }
 });
 

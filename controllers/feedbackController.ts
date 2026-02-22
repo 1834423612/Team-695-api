@@ -1,5 +1,5 @@
 import type { Request, Response } from "express"
-import db from "../config/database"
+import { mainPool as db } from "../config/database"
 import type { Feedback } from "../models/feedback"
 import { sendEmail } from "../services/emailService"
 import { success, error } from "../utils/responses"

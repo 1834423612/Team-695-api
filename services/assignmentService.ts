@@ -1,4 +1,4 @@
-import pool from '../config/database';
+import { mainPool as pool } from '../config/database';
 import { TaskAssignment, CreateAssignmentRequest, UserData, TaskAssignmentResponse } from '../types/assignment';
 import crypto from 'crypto';
 

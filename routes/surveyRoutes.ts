@@ -1,7 +1,8 @@
 import express from 'express';
-import pool from '../config/database';
+import { mainPool as pool } from '../config/database';
 import { verifyToken } from '../middlewares/auth';
 import { success, error } from '../utils/responses';
+import { getDatabaseClientMessage, getDatabaseHttpStatus } from '../utils/databaseError';
 
 const router = express.Router();
 
@@ -73,7 +74,12 @@ router.post('/submit', async (req, res) => {
         return success(res, { message: 'Survey submitted successfully' }, 'Survey submitted successfully');
     } catch (err) {
         console.error('Error submitting survey:', err);
-        return error(res, 500, 'Failed to submit survey', err);
+        return error(
+            res,
+            getDatabaseHttpStatus(err),
+            getDatabaseClientMessage('Failed to submit survey', err),
+            err
+        );
     }
 });
 
@@ -111,7 +117,12 @@ router.get('/query', async (req, res) => {
         return success(res, rows, 'Survey responses retrieved successfully');
     } catch (err) {
         console.error('Error querying survey responses:', err);
-        return error(res, 500, 'Failed to query survey responses', err);
+        return error(
+            res,
+            getDatabaseHttpStatus(err),
+            getDatabaseClientMessage('Failed to query survey responses', err),
+            err
+        );
     }
 });
 

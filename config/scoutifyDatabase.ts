@@ -3,14 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const scoutifyPool = mysql.createPool({
+export const scoutifyPool = mysql.createPool({
     connectionLimit: Number(process.env.SCOUTIFY_DB_CONNECTION_LIMIT) || 50,
-    host: process.env.SCOUTIFY_DB_HOST || process.env.DB_HOST,
-    port: Number(process.env.SCOUTIFY_DB_PORT || process.env.DB_PORT) || 3306,
-    user: process.env.SCOUTIFY_DB_USER || process.env.DB_USER,
-    password: process.env.SCOUTIFY_DB_PASSWORD || process.env.DB_PASSWORD,
+    host: process.env.SCOUTIFY_DB_HOST,
+    port: Number(process.env.SCOUTIFY_DB_PORT) || 3306,
+    user: process.env.SCOUTIFY_DB_USER,
+    password: process.env.SCOUTIFY_DB_PASSWORD,
     database: process.env.SCOUTIFY_DB_NAME,
 });
+
+console.log(`[DB:SCOUTIFY] Pool initialized -> ${process.env.SCOUTIFY_DB_USER ?? 'unknown'}@${process.env.SCOUTIFY_DB_HOST ?? 'unknown'}:${Number(process.env.SCOUTIFY_DB_PORT) || 3306}/${process.env.SCOUTIFY_DB_NAME ?? 'unknown'}`);
 
 setInterval(async () => {
     const startTime = new Date();

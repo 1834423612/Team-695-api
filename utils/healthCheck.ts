@@ -2,6 +2,7 @@ import os from 'os'
 import fs from 'fs'
 import path from 'path'
 import { performance } from 'perf_hooks'
+import { checkDatabaseConnection } from '../config/database'
 
 const pkg = require('../package.json');
 
@@ -146,22 +147,11 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 
 async function checkDatabaseHealth(): Promise<ServiceStatus> {
     try {
-        const startTime = performance.now()
-        // Substitute with your database connection logic
-        const dbConfigPath = path.resolve(__dirname, '../../config/database')
-        if (!fs.existsSync(dbConfigPath)) {
-            return {
-                status: 'unhealthy',
-                message: 'Database config file not found'
-            }
-        }
-        const db = require(dbConfigPath) // If you have a database connection setup
-        await db.query('SELECT 1')
-        const responseTime = Math.round((performance.now() - startTime) * 100) / 100
+        const { responseTime, target } = await checkDatabaseConnection()
         
         return {
             status: 'healthy',
-            message: 'Database connection successful',
+            message: `Database connection successful (${target})`,
             responseTime
         }
     } catch (error) {

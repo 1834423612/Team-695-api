@@ -1,5 +1,5 @@
 import express from 'express';
-import pool from '../config/database';
+import { mainPool as pool } from '../config/database';
 import { verifyToken } from '../middlewares/auth';
 import { success, error } from '../utils/responses';
 

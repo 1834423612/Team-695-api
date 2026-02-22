@@ -1,5 +1,6 @@
 import express from 'express';
-import pool from '../config/database';
+import { mainPool as pool } from '../config/database';
+import { getDatabaseClientMessage, getDatabaseHttpStatus } from '../utils/databaseError';
 
 const router = express.Router();
 
@@ -43,7 +44,9 @@ router.get('/teams', async (req, res) => {
         const [rows] = await pool.query(query, params);
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch teams' });
+        console.error('Error fetching teams:', error);
+        const statusCode = getDatabaseHttpStatus(error);
+        res.status(statusCode).json({ error: getDatabaseClientMessage('Failed to fetch teams', error) });
     }
 });
 
