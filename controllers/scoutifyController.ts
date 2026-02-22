@@ -167,6 +167,25 @@ class ScoutifyController {
                 Number(req.query.offset),
             );
 
+            const matches: any[] = [];
+
+            for (const row of rows) {
+                const positionKey = row.gm_alliance + row.gm_alliance_position;
+
+                if (matches[row.gm_number]) {
+                    matches[row.gm_number][positionKey] = row.team_master_tm_number;
+                    matches[row.gm_number].teams.push(row.team_master_tm_number);
+                } else {
+                    matches[row.gm_number] = {
+                        gm_number: row.gm_number,
+                        gm_game_type: row.gm_game_type,
+                        gm_timestamp: row.gm_timestamp,
+                        teams: [row.team_master_tm_number],
+                        [positionKey]: row.team_master_tm_number 
+                    };
+                }
+            }
+
             return success(res, rows);
         } catch (err) {
             return error(res, 500, 'Failed to query game matchups', err);
