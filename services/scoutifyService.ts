@@ -9,7 +9,7 @@ interface BoundScoutifyUser {
     um_email: string | null;
     um_active: string | null;
     um_admin_f: number | null;
-    um_casdoor_userid: string | null;
+    um_casdoor_userid: string;
     um_android_device_id: string | null;
 }
 
@@ -429,7 +429,7 @@ class ScoutifyService {
         }
 
         const mergedFilters: QueryFilters = {
-            um_id: boundUser.um_id,
+            um_casdoor_userid: boundUser.um_casdoor_userid,
             user_tm_number: boundUser.team_master_tm_number,
             ...filters,
         };
@@ -442,6 +442,7 @@ class ScoutifyService {
                 tm_number,
                 um_id,
                 user_tm_number,
+                um_casdoor_userid,
                 gm_number,
                 gm_game_type,
                 checkin_task,
