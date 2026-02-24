@@ -70,7 +70,7 @@ class ScoutifyService {
                 um_casdoor_userid,
                 um_android_device_id
              FROM user_master
-             WHERE um_name = ?
+             WHERE um_casdoor_userid = ?
              LIMIT 1`,
             [normalizedUsername],
         );
