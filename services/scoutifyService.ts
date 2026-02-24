@@ -121,7 +121,7 @@ class ScoutifyService {
                 um_email,
                 um_active,
                 um_admin_f,
-                     um_casdoor_userid,
+                um_casdoor_userid,
                 um_android_device_id
              FROM user_master
                  WHERE um_casdoor_userid IN (?)
@@ -144,7 +144,7 @@ class ScoutifyService {
                 um_casdoor_userid,
                 um_android_device_id
              FROM user_master
-             WHERE um_name IN (?)
+             WHERE um_casdoor_userid IN (?)
              LIMIT 1`,
             [candidates],
         );
@@ -442,7 +442,6 @@ class ScoutifyService {
                 tm_number,
                 um_id,
                 user_tm_number,
-                um_casdoor_userid,
                 gm_number,
                 gm_game_type,
                 checkin_task,
