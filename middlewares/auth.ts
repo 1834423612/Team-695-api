@@ -5,6 +5,7 @@ import authService from "../services/authService"
 import tokenBlacklist from "../services/tokenBlacklistService"
 import { unauthorized } from "../utils/responses"
 import { verifyApiKey } from "./apiKeyAuth"
+import { sanitizeLatin1IfString } from "../utils/sanitizeLatin1"
 
 // Extend Express Request type to include user information
 declare global {
@@ -35,17 +36,17 @@ export const verifyToken = [
             // First try to get token from authorization header
             const authHeader = req.headers.authorization
             if (authHeader && authHeader.startsWith("Bearer ")) {
-                token = authHeader.split(" ")[1]
+                token = sanitizeLatin1IfString(authHeader.split(" ")[1])
             }
 
             // If not found in authorization header, try from query parameters
             if (!token) {
-                token = req.query.token as string
+                token = sanitizeLatin1IfString(req.query.token as string)
             }
 
             // If still not found, check in cookie
             if (!token && req.cookies) {
-                token = req.cookies.token
+                token = sanitizeLatin1IfString(req.cookies.token)
             }
 
             // No token found, return unauthorized

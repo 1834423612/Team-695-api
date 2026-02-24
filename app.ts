@@ -10,6 +10,7 @@ import helmet from "helmet"
 import morgan from "morgan"
 import os from 'os'
 import { performHealthCheck } from "./utils/healthCheck"
+import { sanitizeLatin1IfString } from "./utils/sanitizeLatin1"
 
 // Type declarations to extend Request object with rawBody property
 declare global {
@@ -122,6 +123,31 @@ app.use(
     }),
 )
 
+// Sanitize request headers/query values that may contain non Latin-1 characters
+app.use((req, res, next) => {
+    for (const key of Object.keys(req.headers)) {
+        const current = req.headers[key]
+        if (typeof current === 'string') {
+            req.headers[key] = sanitizeLatin1IfString(current)
+            continue
+        }
+        if (Array.isArray(current)) {
+            req.headers[key] = current.map((item) => sanitizeLatin1IfString(item))
+        }
+    }
+
+    const queryRef = req.query as Record<string, unknown>
+    const queryKeysToSanitize = ['token', 'accessKey', 'accessSecret', 'authorization']
+    for (const key of queryKeysToSanitize) {
+        const value = queryRef[key]
+        if (typeof value === 'string') {
+            queryRef[key] = sanitizeLatin1IfString(value)
+        }
+    }
+
+    next()
+})
+
 // Body parser middleware configuration
 app.use(bodyParser.json({
     verify: (req: any, res, buf) => {
@@ -134,7 +160,14 @@ app.use(bodyParser.json({
 app.use(bodyParser.urlencoded({ extended: true }))
 
 // Swagger Docs
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc, { explorer: true }))
+app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDoc, {
+        explorer: true,
+        customJs: '/swagger-auth-sanitize.js',
+    }),
+)
 
 // API Endpoint routes
 const apiRouter = express.Router()
