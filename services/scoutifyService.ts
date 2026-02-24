@@ -446,7 +446,7 @@ class ScoutifyService {
                 gm_game_type,
                 checkin_task,
                 task_completed,
-                ett_tts
+                ett_ts
              FROM event_task_tracker`,
             mergedFilters,
             'sm_year DESC, cm_event_code ASC, gm_number ASC, task_id ASC',
