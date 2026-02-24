@@ -429,7 +429,7 @@ class ScoutifyService {
         }
 
         const mergedFilters: QueryFilters = {
-            um_casdoor_userid: boundUser.um_casdoor_userid,
+            um_id: boundUser.um_id,
             user_tm_number: boundUser.team_master_tm_number,
             ...filters,
         };
