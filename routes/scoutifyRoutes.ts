@@ -8,6 +8,7 @@ const router = Router();
 router.get('/game-matchups', scoutifyPublicPerSecondLimiter, scoutifyPublicPerMinuteLimiter, scoutifyController.getGameMatchups);
 router.get('/game-details', scoutifyPublicPerSecondLimiter, scoutifyPublicPerMinuteLimiter, scoutifyController.getGameDetails);
 router.get('/game-comments', scoutifyPublicPerSecondLimiter, scoutifyPublicPerMinuteLimiter, scoutifyController.getGameComments);
+router.get('/game-constants', scoutifyPublicPerMinuteLimiter, scoutifyPublicPerMinuteLimiter, scoutifyController.getGameConstants);
 router.post('/game-comments', verifyToken, scoutifyController.createGameComment);
 
 router.get('/user/me', verifyToken, scoutifyController.getCurrentUserBinding);

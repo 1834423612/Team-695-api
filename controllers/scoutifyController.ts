@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import scoutifyService from '../services/scoutifyService';
 import { success, error } from '../utils/responses';
 import { sanitizeGameComment } from '../utils/sanitizeText';
@@ -672,6 +672,16 @@ class ScoutifyController {
             return success(res, result, 'Event task deleted');
         } catch (err) {
             return error(res, 500, 'Failed to delete event task', err);
+        }
+    }
+
+    async getGameConstants(req: Request, res: Response) {
+        try {
+            const result = await scoutifyService.getGameConstants()
+
+            return success(res, result)
+        } catch (err) {
+            return error(res, 500, 'Failed to get game constants', err);
         }
     }
 }

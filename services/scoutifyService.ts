@@ -760,6 +760,14 @@ class ScoutifyService {
 
         return { affectedRows: result?.affectedRows || 0 };
     }
+
+    async getGameConstants() {
+        const [rows]: any = await scoutifyPool.query(
+            `SELECT * FROM game_constants;`
+        )
+
+        return rows
+    }
 }
 
 export default new ScoutifyService();
