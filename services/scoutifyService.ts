@@ -766,7 +766,7 @@ class ScoutifyService {
             `SELECT * FROM game_constants;`
         )
 
-        return rows
+        return rows?.[0]
     }
 }
 
