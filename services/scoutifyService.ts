@@ -476,7 +476,7 @@ class ScoutifyService {
         gd_auton_path?: string | null;
     }) {
         await scoutifyPool.query(
-            `INSERT INTO game_details (
+            `INSERT OR REPLACE INTO game_details (
                 frc_season_master_sm_year,
                 competition_master_cm_event_code,
                 game_matchup_gm_game_type,
