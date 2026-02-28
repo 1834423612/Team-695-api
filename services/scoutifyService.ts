@@ -474,7 +474,28 @@ class ScoutifyService {
         gd_score?: number;
         gd_um_id: string;
         gd_auton_path?: string | null;
-    }) {
+    }[]) {
+
+        if (!payload.length) return [];
+
+        const rowPlaceholders = `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const allPlaceholders = payload.map(() => rowPlaceholders).join(', ');
+
+        const flattenedValues = payload.flatMap(p => [
+            p.frc_season_master_sm_year,
+            p.competition_master_cm_event_code,
+            p.game_matchup_gm_game_type,
+            p.game_matchup_gm_number,
+            p.game_matchup_gm_alliance,
+            p.game_matchup_gm_alliance_position,
+            p.game_element_group_geg_grp_key,
+            p.game_element_ge_key,
+            p.gd_value,
+            p.gd_score ?? 0,
+            p.gd_um_id,
+            p.gd_auton_path ?? null,
+        ])
+
         await scoutifyPool.query(
             `INSERT OR REPLACE INTO game_details (
                 frc_season_master_sm_year,
@@ -489,21 +510,8 @@ class ScoutifyService {
                 gd_score,
                 gd_um_id,
                 gd_auton_path
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                payload.frc_season_master_sm_year,
-                payload.competition_master_cm_event_code,
-                payload.game_matchup_gm_game_type,
-                payload.game_matchup_gm_number,
-                payload.game_matchup_gm_alliance,
-                payload.game_matchup_gm_alliance_position,
-                payload.game_element_group_geg_grp_key,
-                payload.game_element_ge_key,
-                payload.gd_value,
-                payload.gd_score ?? 0,
-                payload.gd_um_id,
-                payload.gd_auton_path ?? null,
-            ],
+            ) VALUES ${allPlaceholders}`,
+            flattenedValues
         );
 
         return payload;
