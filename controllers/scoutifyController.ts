@@ -407,9 +407,9 @@ class ScoutifyController {
         try {
             const scopedUsername = this.getScopedUsername(req);
             const scopedTeamNumber = this.getScopedTeamNumber(req);
-            const payload = { ...req.body };
+            const payload = req.body;
 
-            if (!payload.gd_um_id && scopedUsername) {
+            if(scopedUsername) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     scopedUsername,
                     scopedTeamNumber ?? Number(payload.user_tm_number),
