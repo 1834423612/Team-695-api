@@ -20,7 +20,7 @@ router.get('/event-tasks', verifyToken, scoutifyController.getEventTasks);
 
 router.patch('/admin/users/:teamNumber/:scoutifyUserId/android-device', verifyToken, requireAdmin, scoutifyController.adminUpdateAndroidDeviceBinding);
 
-router.post('/admin/game-details', verifyToken, requireAdmin, scoutifyController.createGameDetail);
+router.post('/admin/game-details', verifyToken, scoutifyController.createGameDetail);
 router.put('/admin/game-details', verifyToken, requireAdmin, scoutifyController.updateGameDetail);
 router.delete('/admin/game-details', verifyToken, requireAdmin, scoutifyController.deleteGameDetail);
 
