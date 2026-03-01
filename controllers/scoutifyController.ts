@@ -291,11 +291,11 @@ class ScoutifyController {
 
             if (
                 frc_season_master_sm_year === undefined
-                || !competition_master_cm_event_code
-                || !game_matchup_gm_game_type
-                || game_matchup_gm_number === undefined
-                || !game_matchup_gm_alliance
-                || game_matchup_gm_alliance_position === undefined
+                    || !competition_master_cm_event_code
+                        || !game_matchup_gm_game_type
+                            || game_matchup_gm_number === undefined
+                                || !game_matchup_gm_alliance
+                                    || game_matchup_gm_alliance_position === undefined
             ) {
                 return error(res, 400, 'Missing required fields for game comment');
             }
