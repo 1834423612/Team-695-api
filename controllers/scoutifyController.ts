@@ -279,63 +279,88 @@ class ScoutifyController {
             const scopedUsername = this.getScopedUsername(req);
             const scopedTeamNumber = this.getScopedTeamNumber(req);
 
-            const {
-                frc_season_master_sm_year,
-                competition_master_cm_event_code,
-                game_matchup_gm_game_type,
-                game_matchup_gm_number,
-                game_matchup_gm_alliance,
-                game_matchup_gm_alliance_position,
-                gc_comment,
-            } = req.body;
+            const commentsPayload = req.body;
 
-            if (
-                frc_season_master_sm_year === undefined
-                    || !competition_master_cm_event_code
-                        || !game_matchup_gm_game_type
-                            || game_matchup_gm_number === undefined
-                                || !game_matchup_gm_alliance
-                                    || game_matchup_gm_alliance_position === undefined
-            ) {
-                return error(res, 400, 'Missing required fields for game comment');
+            // 1. Ensure the body is a valid array
+            if (!Array.isArray(commentsPayload) || commentsPayload.length === 0) {
+                return error(res, 400, 'Expected a non-empty array of game comments');
             }
 
-            const smYear = Number(frc_season_master_sm_year);
-            const gameNumber = Number(game_matchup_gm_number);
-            const alliancePosition = Number(game_matchup_gm_alliance_position);
+            const sanitizedComments = [];
 
-            if (!Number.isFinite(smYear) || !Number.isFinite(gameNumber) || !Number.isFinite(alliancePosition)) {
-                return error(res, 400, 'Invalid numeric fields for game comment');
+            // 2. Validate and sanitize every object in the list
+            for (const item of commentsPayload) {
+                const {
+                    frc_season_master_sm_year,
+                    competition_master_cm_event_code,
+                    game_matchup_gm_game_type,
+                    game_matchup_gm_number,
+                    game_matchup_gm_alliance,
+                    game_matchup_gm_alliance_position,
+                    gc_comment,
+                } = item;
+
+                if (
+                    frc_season_master_sm_year === undefined
+                        || !competition_master_cm_event_code
+                            || !game_matchup_gm_game_type
+                                || game_matchup_gm_number === undefined
+                                    || !game_matchup_gm_alliance
+                                        || game_matchup_gm_alliance_position === undefined
+                ) {
+                    return error(res, 400, 'Missing required fields for one or more game comments');
+                }
+
+                const smYear = Number(frc_season_master_sm_year);
+                const gameNumber = Number(game_matchup_gm_number);
+                const alliancePosition = Number(game_matchup_gm_alliance_position);
+
+                if (!Number.isFinite(smYear) || !Number.isFinite(gameNumber) || !Number.isFinite(alliancePosition)) {
+                    return error(res, 400, 'Invalid numeric fields for one or more game comments');
+                }
+
+                const safeComment = sanitizeGameComment(gc_comment);
+                if (!safeComment) {
+                    return error(res, 400, 'gc_comment is required in all comments');
+                }
+
+                if (safeComment.length > 200) {
+                    return error(res, 400, 'gc_comment must be 200 characters or fewer after sanitization in all comments');
+                }
+
+                sanitizedComments.push({
+                    frc_season_master_sm_year: smYear,
+                    competition_master_cm_event_code: String(competition_master_cm_event_code),
+                    game_matchup_gm_game_type: String(game_matchup_gm_game_type),
+                    game_matchup_gm_number: gameNumber,
+                    game_matchup_gm_alliance: String(game_matchup_gm_alliance),
+                    game_matchup_gm_alliance_position: alliancePosition,
+                    gc_comment: safeComment,
+                });
             }
 
-            const safeComment = sanitizeGameComment(gc_comment);
-            if (!safeComment) {
-                return error(res, 400, 'gc_comment is required');
+            // 3. Execute the insertions
+            const createdResults = [];
+            for (const safeCommentData of sanitizedComments) {
+                const created = await scoutifyService.createGameComment(
+                    req.user, 
+                    safeCommentData, 
+                    scopedUsername, 
+                    scopedTeamNumber
+                );
+
+                if (!created) {
+                    return error(res, 404, scopedUsername
+                        ? 'No Scoutify user found for provided username'
+                        : 'No Scoutify user binding found for current Casdoor user');
+                }
+                
+                createdResults.push(created);
             }
 
-            if (safeComment.length > 200) {
-                return error(res, 400, 'gc_comment must be 200 characters or fewer after sanitization');
-            }
-
-            const created = await scoutifyService.createGameComment(req.user, {
-                frc_season_master_sm_year: smYear,
-                competition_master_cm_event_code: String(competition_master_cm_event_code),
-                game_matchup_gm_game_type: String(game_matchup_gm_game_type),
-                game_matchup_gm_number: gameNumber,
-                game_matchup_gm_alliance: String(game_matchup_gm_alliance),
-                game_matchup_gm_alliance_position: alliancePosition,
-                gc_comment: safeComment,
-            }, scopedUsername, scopedTeamNumber);
-
-            if (!created) {
-                return error(res, 404, scopedUsername
-                    ? 'No Scoutify user found for provided username'
-                    : 'No Scoutify user binding found for current Casdoor user');
-            }
-
-            return success(res, created, 'Game comment created');
+            return success(res, createdResults, 'Game comments created successfully');
         } catch (err) {
-            return error(res, 500, 'Failed to create game comment', err);
+            return error(res, 500, 'Failed to create game comments', err);
         }
     }
 
