@@ -28,7 +28,8 @@ function toStringSafe(input: unknown): string {
 }
 
 export function sanitizeGameComment(input: unknown): string {
-    const raw = toStringSafe(input);
+    let raw = toStringSafe(input);
+    raw = raw.substring(0, Math.min(200, raw.length))
 
     return raw
         .replace(/\r\n?/g, '\n')
