@@ -183,7 +183,7 @@ class ScoutifyController {
                         gm_game_type: row.gm_game_type,
                         gm_timestamp: row.gm_timestamp,
                         teams: [row.team_master_tm_number],
-                        [positionKey]: row.team_master_tm_number 
+                        [positionKey]: row.team_master_tm_number
                     };
                 }
             }
@@ -302,11 +302,11 @@ class ScoutifyController {
 
                 if (
                     frc_season_master_sm_year === undefined
-                        || !competition_master_cm_event_code
-                            || !game_matchup_gm_game_type
-                                || game_matchup_gm_number === undefined
-                                    || !game_matchup_gm_alliance
-                                        || game_matchup_gm_alliance_position === undefined
+                    || !competition_master_cm_event_code
+                    || !game_matchup_gm_game_type
+                    || game_matchup_gm_number === undefined
+                    || !game_matchup_gm_alliance
+                    || game_matchup_gm_alliance_position === undefined
                 ) {
                     return error(res, 400, 'Missing required fields for one or more game comments');
                 }
@@ -343,9 +343,9 @@ class ScoutifyController {
             const createdResults = [];
             for (const safeCommentData of sanitizedComments) {
                 const created = await scoutifyService.createGameComment(
-                    req.user, 
-                    safeCommentData, 
-                    scopedUsername, 
+                    req.user,
+                    safeCommentData,
+                    scopedUsername,
                     scopedTeamNumber
                 );
 
@@ -354,7 +354,7 @@ class ScoutifyController {
                         ? 'No Scoutify user found for provided username'
                         : 'No Scoutify user binding found for current Casdoor user');
                 }
-                
+
                 createdResults.push(created);
             }
 
@@ -434,7 +434,7 @@ class ScoutifyController {
             const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = req.body;
 
-            if(scopedUsername) {
+            if (scopedUsername) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
                     scopedUsername,
                     scopedTeamNumber ?? Number(payload.user_tm_number),
