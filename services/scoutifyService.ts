@@ -328,7 +328,7 @@ class ScoutifyService {
         }
 
         await scoutifyPool.query(
-            `INSERT IGNORE INTO game_comments (
+            `REPLACE INTO game_comments (
                 frc_season_master_sm_year,
                 competition_master_cm_event_code,
                 game_matchup_gm_game_type,
