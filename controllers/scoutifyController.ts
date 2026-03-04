@@ -280,6 +280,7 @@ class ScoutifyController {
             const scopedTeamNumber = this.getScopedTeamNumber(req);
 
             const commentsPayload = req.body;
+            console.log("COMMENTS PAYLOAD", commentsPayload)
 
             // 1. Ensure the body is a valid array
             if (!Array.isArray(commentsPayload) || commentsPayload.length === 0) {
@@ -314,6 +315,7 @@ class ScoutifyController {
                 const smYear = Number(frc_season_master_sm_year);
                 const gameNumber = Number(game_matchup_gm_number);
                 const alliancePosition = Number(game_matchup_gm_alliance_position);
+                
 
                 if (!Number.isFinite(smYear) || !Number.isFinite(gameNumber) || !Number.isFinite(alliancePosition)) {
                     return error(res, 400, 'Invalid numeric fields for one or more game comments');
@@ -433,6 +435,7 @@ class ScoutifyController {
             const scopedUsername = this.getScopedUsername(req);
             const scopedTeamNumber = this.getScopedTeamNumber(req);
             const payload = req.body;
+            const user = req.user
 
             if (scopedUsername) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
@@ -442,6 +445,7 @@ class ScoutifyController {
                 if (!resolvedScoutifyUserId) {
                     return error(res, 404, 'Scoutify user not found by username');
                 }
+
                 payload.gd_um_id = resolvedScoutifyUserId;
             } else if (!payload.gd_um_id && payload.gd_um_name) {
                 const resolvedScoutifyUserId = await scoutifyService.resolveScoutifyUserIdByUsername(
@@ -454,7 +458,13 @@ class ScoutifyController {
                 payload.gd_um_id = resolvedScoutifyUserId;
             }
 
-            const created = await scoutifyService.createGameDetail(payload);
+            const created = await scoutifyService.createGameDetail(
+                user,
+                payload,
+                scopedUsername,
+                scopedTeamNumber,
+            );
+
             return success(res, created, 'Game detail created');
         } catch (err) {
             return error(res, 500, 'Failed to create game detail', err);

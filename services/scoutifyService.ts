@@ -351,42 +351,7 @@ class ScoutifyService {
             ],
         );
 
-        const [rows]: any = await scoutifyPool.query(
-            `SELECT
-                frc_season_master_sm_year,
-                competition_master_cm_event_code,
-                game_matchup_gm_game_type,
-                game_matchup_gm_number,
-                game_matchup_gm_alliance,
-                game_matchup_gm_alliance_position,
-                gc_comment,
-                gc_um_id,
-                gc_ts
-             FROM game_comments
-             WHERE frc_season_master_sm_year = ?
-               AND competition_master_cm_event_code = ?
-               AND game_matchup_gm_game_type = ?
-               AND game_matchup_gm_number = ?
-               AND game_matchup_gm_alliance = ?
-               AND game_matchup_gm_alliance_position = ?
-               AND gc_um_id = ?
-             ORDER BY gc_ts DESC
-             LIMIT 1`,
-            [
-                payload.frc_season_master_sm_year,
-                payload.competition_master_cm_event_code,
-                payload.game_matchup_gm_game_type,
-                payload.game_matchup_gm_number,
-                payload.game_matchup_gm_alliance,
-                payload.game_matchup_gm_alliance_position,
-                boundUser.um_id,
-            ],
-        );
-
-        return rows?.[0] || {
-            ...payload,
-            gc_um_id: boundUser.um_id,
-        };
+        return boundUser?.um_id ? payload : null
     }
 
     async listEventAssignments(authUser: any, filters: QueryFilters, limit?: number, offset?: number, username?: string, teamNumber?: number) {
@@ -461,9 +426,11 @@ class ScoutifyService {
         };
     }
 
-    async createGameDetail(payload: any) {
-        const um_id = payload.gd_um_id
-        console.log("RECEIVED PAYLOAD:", payload);
+    async createGameDetail(authUser: any, payload: any, username?: string, teamNumber?: number) {
+        const boundUser = await this.resolveBoundUser(authUser, username, teamNumber);
+        if (!boundUser) {
+            return null;
+        }
 
         if (!payload || !payload.length) return [];
 
@@ -588,7 +555,7 @@ class ScoutifyService {
                         game_element_ge_key: mapping.ge_key,
                         gd_value: numValue,
                         gd_score: 0, // Defaults to 0
-                        gd_um_id: um_id,
+                        gd_um_id: boundUser.um_id,
                         gd_auton_path: stringValue, // Reuse gd_auton_path for all string entries
                     });
                 }
