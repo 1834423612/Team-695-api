@@ -547,8 +547,7 @@ class ScoutifyService {
                         game_matchup_gm_game_type: currentGameType,
                         game_matchup_gm_number: gameDetail.matchNumber,
                         
-                        // Default to 'red'/'blue' instead of 'R'/'B' if that's what the DB expects
-                        game_matchup_gm_alliance: gameDetail.alliance === 'R' ? 'red' : (gameDetail.alliance === 'B' ? 'blue' : gameDetail.alliance),
+                        game_matchup_gm_alliance: gameDetail.alliance,
                         game_matchup_gm_alliance_position: gameDetail.alliancePosition,
                         
                         game_element_group_geg_grp_key: mapping.grp_key,
