@@ -461,27 +461,146 @@ class ScoutifyService {
         };
     }
 
-    async createGameDetail(payload: {
-        frc_season_master_sm_year: number;
-        competition_master_cm_event_code: string;
-        game_matchup_gm_game_type: string;
-        game_matchup_gm_number: number;
-        game_matchup_gm_alliance: string;
-        game_matchup_gm_alliance_position: number;
-        game_element_group_geg_grp_key: number;
-        game_element_ge_key: number;
-        gd_value: number;
-        gd_score?: number;
-        gd_um_id: string;
-        gd_auton_path?: string | null;
-    }[]) {
+    async createGameDetail(payload: any) {
+        const um_id = payload.gd_um_id
+        console.log("RECEIVED PAYLOAD:", payload);
 
-        if (!payload.length) return [];
+        if (!payload || !payload.length) return [];
+
+        // 1. Fetch the current game constants from the database
+        const [constantsRows]: any = await scoutifyPool.query(
+            `SELECT 
+                frc_season_master_sm_year, 
+                competition_master_cm_event_code, 
+                game_matchup_gm_game_type 
+             FROM game_constants LIMIT 1`
+        );
+
+        if (!constantsRows || constantsRows.length === 0) {
+            throw new Error("Game constants are not configured in the database.");
+        }
+
+        const currentYear = constantsRows[0].frc_season_master_sm_year;
+        const currentEventCode = constantsRows[0].competition_master_cm_event_code;
+        const currentGameType = constantsRows[0].game_matchup_gm_game_type;
+
+        // 2. Mapping based on the provided CSV
+        const fieldMapping: Record<string, { ge_key: number; grp_key: number; isString?: boolean }> = {
+            // Group 1: Pregame
+            startingLocation: { ge_key: 1001, grp_key: 1 },
+            robotOnField: { ge_key: 1002, grp_key: 1 },
+            robotPreloaded: { ge_key: 1003, grp_key: 1 },
+            
+            // Group 2: Auton
+            autonPath: { ge_key: 2001, grp_key: 2, isString: true },
+            autonAttemptsClimb: { ge_key: 2101, grp_key: 2 },
+            autonClimbSuccess: { ge_key: 2103, grp_key: 2 },
+            autonClimbPosition: { ge_key: 2104, grp_key: 2, isString: true },
+            autonFuelCount: { ge_key: 2201, grp_key: 2 },
+
+            // Group 3: Transition & Shifts
+            transitionFirstActive: { ge_key: 3000, grp_key: 3 },
+            transitionCyclingTime: { ge_key: 3001, grp_key: 3 },
+            transitionStockpilingTime: { ge_key: 3002, grp_key: 3 },
+            transitionDefendingTime: { ge_key: 3003, grp_key: 3 },
+            transitionBrokenTime: { ge_key: 3004, grp_key: 3 },
+
+            shift1CyclingTime: { ge_key: 3101, grp_key: 3 },
+            shift1StockpilingTime: { ge_key: 3102, grp_key: 3 },
+            shift1DefendingTime: { ge_key: 3103, grp_key: 3 },
+            shift1BrokenTime: { ge_key: 3104, grp_key: 3 },
+
+            shift2CyclingTime: { ge_key: 3201, grp_key: 3 },
+            shift2StockpilingTime: { ge_key: 3202, grp_key: 3 },
+            shift2DefendingTime: { ge_key: 3203, grp_key: 3 },
+            shift2BrokenTime: { ge_key: 3204, grp_key: 3 },
+
+            shift3CyclingTime: { ge_key: 3301, grp_key: 3 },
+            shift3StockpilingTime: { ge_key: 3302, grp_key: 3 },
+            shift3DefendingTime: { ge_key: 3303, grp_key: 3 },
+            shift3BrokenTime: { ge_key: 3304, grp_key: 3 },
+
+            shift4CyclingTime: { ge_key: 3401, grp_key: 3 },
+            shift4StockpilingTime: { ge_key: 3402, grp_key: 3 },
+            shift4DefendingTime: { ge_key: 3403, grp_key: 3 },
+            shift4BrokenTime: { ge_key: 3404, grp_key: 3 },
+
+            endgameCyclingTime: { ge_key: 3501, grp_key: 3 },
+            endgameStockpilingTime: { ge_key: 3502, grp_key: 3 },
+            endgameDefendingTime: { ge_key: 3503, grp_key: 3 },
+            endgameBrokenTime: { ge_key: 3504, grp_key: 3 },
+
+            // Group 4: Endgame, Teleop, Postgame
+            endgameAttemptsClimb: { ge_key: 4101, grp_key: 4 },
+            endgameClimbSuccess: { ge_key: 4102, grp_key: 4 },
+            endgameClimbPosition: { ge_key: 4103, grp_key: 4, isString: true },
+            
+            teleopFuelCount: { ge_key: 4200, grp_key: 4 },
+            postgameShootAnywhere: { ge_key: 4201, grp_key: 4 },
+            postgameShootWhileMoving: { ge_key: 4202, grp_key: 4 },
+            postgameStockpileNeutral: { ge_key: 4203, grp_key: 4 },
+            postgameStockpileAlliance: { ge_key: 4204, grp_key: 4 },
+            postgameStockpileCrossCourt: { ge_key: 4205, grp_key: 4 },
+            postgameFeedOutpost: { ge_key: 4206, grp_key: 4 },
+            postgameReceiveOutpost: { ge_key: 4207, grp_key: 4 },
+            postgameUnderTrench: { ge_key: 4208, grp_key: 4 },
+            postgameOverBump: { ge_key: 4209, grp_key: 4 },
+
+            // Review Flags
+            pregameFlag: { ge_key: 4211, grp_key: 4 },
+            autonFlag: { ge_key: 4212, grp_key: 4 },
+            teleopFlag: { ge_key: 4213, grp_key: 4 },
+            postgameFlag: { ge_key: 4214, grp_key: 4 },
+        };
+
+        const dbRowsToInsert: any[] = [];
+
+        // 3. Convert the incoming Kotlin objects into individual rows
+        for (const gameDetail of payload) {
+            for (const [fieldName, mapping] of Object.entries(fieldMapping)) {
+                const rawValue = gameDetail[fieldName];
+                
+                // If the value exists (isn't null or undefined), add it to the insertion list
+                if (rawValue !== null && rawValue !== undefined) {
+                    
+                    let numValue = 0;
+                    let stringValue: string | null = null;
+
+                    if (mapping.isString) {
+                        stringValue = String(rawValue);
+                    } else if (typeof rawValue === 'boolean') {
+                        numValue = rawValue ? 1 : 0; // Convert booleans to 1/0 for MySQL
+                    } else {
+                        numValue = Number(rawValue); // Numbers stay as numbers
+                    }
+
+                    dbRowsToInsert.push({
+                        frc_season_master_sm_year: currentYear,
+                        competition_master_cm_event_code: currentEventCode,
+                        game_matchup_gm_game_type: currentGameType,
+                        game_matchup_gm_number: gameDetail.matchNumber,
+                        
+                        // Default to 'red'/'blue' instead of 'R'/'B' if that's what the DB expects
+                        game_matchup_gm_alliance: gameDetail.alliance === 'R' ? 'red' : (gameDetail.alliance === 'B' ? 'blue' : gameDetail.alliance),
+                        game_matchup_gm_alliance_position: gameDetail.alliancePosition,
+                        
+                        game_element_group_geg_grp_key: mapping.grp_key,
+                        game_element_ge_key: mapping.ge_key,
+                        gd_value: numValue,
+                        gd_score: 0, // Defaults to 0
+                        gd_um_id: um_id,
+                        gd_auton_path: stringValue, // Reuse gd_auton_path for all string entries
+                    });
+                }
+            }
+        }
+
+        if (dbRowsToInsert.length === 0) return [];
 
         const rowPlaceholders = `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        const allPlaceholders = payload.map(() => rowPlaceholders).join(', ');
+        const allPlaceholders = dbRowsToInsert.map(() => rowPlaceholders).join(', ');
 
-        const flattenedValues = payload.flatMap(p => [
+        const flattenedValues = dbRowsToInsert.flatMap(p => [
             p.frc_season_master_sm_year,
             p.competition_master_cm_event_code,
             p.game_matchup_gm_game_type,
@@ -491,11 +610,12 @@ class ScoutifyService {
             p.game_element_group_geg_grp_key,
             p.game_element_ge_key,
             p.gd_value,
-            p.gd_score ?? 0,
+            p.gd_score,
             p.gd_um_id,
-            p.gd_auton_path ?? null,
-        ])
+            p.gd_auton_path
+        ]);
 
+        // 4. Insert all rows into game_details
         await scoutifyPool.query(
             `REPLACE INTO game_details (
                 frc_season_master_sm_year,
