@@ -23,7 +23,6 @@ declare global {
  * Combined authentication middleware - tries API Key first, falls back to JWT
  */
 export const verifyToken = [
-    verifyApiKey,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             // If already authenticated via API Key, continue
@@ -35,7 +34,7 @@ export const verifyToken = [
 
             // First try to get token from authorization header
             const authHeader = req.headers.authorization
-            if (authHeader && authHeader.startsWith("Bearer ")) {
+             if (authHeader && authHeader.startsWith("Bearer ")) {
                 token = sanitizeLatin1IfString(authHeader.split(" ")[1])
             }
 
@@ -182,7 +181,8 @@ export const verifyToken = [
             console.error("Token verification error:", error)
             return unauthorized(res, "Failed to verify token")
         }
-    }
+    },
+    verifyApiKey,
 ]
 
 /**
