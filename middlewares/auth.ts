@@ -182,7 +182,7 @@ export const verifyToken = [
             return unauthorized(res, "Failed to verify token")
         }
     },
-    verifyApiKey,
+    //verifyApiKey,
 ]
 
 /**
