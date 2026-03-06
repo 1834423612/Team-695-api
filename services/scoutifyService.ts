@@ -250,7 +250,24 @@ class ScoutifyService {
     }
 
     async listGameMatchups(filters: QueryFilters, limit?: number, offset?: number) {
-        const { sql, params } = this.buildPagedQuery(
+        const where: string[] = [];
+        const params: Array<string | number> = [];
+
+        Object.entries(filters || {}).forEach(([column, value]) => {
+            if (value !== undefined && value !== '') {
+                where.push(`${column} = ?`);
+                params.push(value);
+            }
+        });
+
+        const whereClause = where.length ? ` WHERE ${where.join(' AND ')}` : '';
+        
+        // FIX: Increased the absolute maximum limit from 500 to 2000.
+        // A full regional has ~100 matches * 6 teams = ~600 rows.
+        const safeLimit = Math.min(Math.max(Number(limit) || 1000, 1), 2000);
+        const safeOffset = Math.max(Number(offset) || 0, 0);
+
+        const [rows]: any = await scoutifyPool.query(
             `SELECT
                 frc_season_master_sm_year,
                 competition_master_cm_event_code,
@@ -261,14 +278,12 @@ class ScoutifyService {
                 team_master_tm_number,
                 gm_value,
                 gm_timestamp
-             FROM game_matchup`,
-            filters,
-            'gm_number ASC, gm_alliance ASC, gm_alliance_position ASC',
-            limit,
-            offset,
+             FROM game_matchup${whereClause}
+             ORDER BY gm_number ASC, gm_alliance ASC, gm_alliance_position ASC
+             LIMIT ? OFFSET ?`,
+            [...params, safeLimit, safeOffset]
         );
 
-        const [rows]: any = await scoutifyPool.query(sql, params);
         return rows;
     }
 

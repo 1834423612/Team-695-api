@@ -164,7 +164,7 @@ class ScoutifyController {
                     gm_alliance_position: req.query.alliancePosition as string,
                     team_master_tm_number: teamNumber,
                 },
-                Number(req.query.limit),
+                Number(2000),
                 Number(req.query.offset),
             );
 
