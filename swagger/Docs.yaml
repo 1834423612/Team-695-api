@@ -2094,6 +2094,27 @@ components:
           type: string
           description: Optional success message
         data:
+          type: array
+          items:
+            type: object
+      example:
+        success: true
+        message: Request completed successfully
+        data: []
+    GetScoutifyGameConstantsSuccess:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+          description: Always true for success responses
+        message:
+          type: string
+          description: Optional success message
+        data:
           type: object
       example:
         success: true
@@ -2170,11 +2191,13 @@ components:
           type: string
           description: Optional success message
         data:
-          type: object
+          type: array
+          items:
+            type: object
       example:
         success: true
         message: Request completed successfully
-        data: {}
+        data: []
     PutScoutifyAdminGameDetailsSuccess:
       type: object
       required:
@@ -3265,7 +3288,10 @@ paths:
   /survey/query:
     get:
       summary: Query survey responses
-      description: Query survey responses with optional filtering
+      description: Query survey responses with optional filtering. The preferred
+        query names are eventId, formId, and teamNumber, while legacy aliases
+        eventid, event_id, formid, form_id, teamnumber, and team_number are also
+        accepted by the backend.
       tags:
         - Surveys
       security:
@@ -3277,17 +3303,48 @@ paths:
           name: eventId
           schema:
             type: string
-          description: Filter by event ID
+          description: Preferred event ID filter.
+        - in: query
+          name: eventid
+          schema:
+            type: string
+          description: Legacy alias of eventId.
+        - in: query
+          name: event_id
+          schema:
+            type: string
+          description: Snake_case alias of eventId.
         - in: query
           name: formId
           schema:
             type: string
-          description: Filter by form ID
+          description: Preferred form ID filter.
+        - in: query
+          name: formid
+          schema:
+            type: string
+          description: Legacy alias of formId.
+        - in: query
+          name: form_id
+          schema:
+            type: string
+          description: Snake_case alias of formId.
         - in: query
           name: teamNumber
           schema:
             type: string
-          description: Filter by team number
+          description: Preferred team number filter. Compared against data.teamNumber
+            after JSON string normalization.
+        - in: query
+          name: teamnumber
+          schema:
+            type: string
+          description: Legacy alias of teamNumber.
+        - in: query
+          name: team_number
+          schema:
+            type: string
+          description: Snake_case alias of teamNumber.
       responses:
         "200":
           description: Survey responses retrieved successfully
@@ -4230,16 +4287,6 @@ paths:
           name: scoutifyUsername
           schema:
             type: string
-          description: Optional Scoutify username. When provided, assignment scope resolves by username.
-        - in: query
-          name: scoutifyUserTeamNumber
-          schema:
-            type: integer
-          description: Optional team number used with scoutifyUsername for disambiguation.
-        - in: query
-          name: scoutifyUsername
-          schema:
-            type: string
           description: Scoutify username. When provided and teamNumber is absent, backend resolves user team and queries by that team.
         - in: query
           name: scoutifyUserTeamNumber
@@ -4494,11 +4541,11 @@ paths:
             type: integer
             default: 0
     post:
-      summary: Create Scoutify game comment
-      description: Create a game_comments record for a specific match alliance
-        position. gc_um_id is resolved from current authenticated Scoutify
-        binding, and gc_comment is automatically sanitized into a safe format
-        before persistence.
+      summary: Create Scoutify game comments
+      description: Create or replace one or more game_comments rows for a specific
+        match alliance position. The request body must be a non-empty array. Each
+        item is sanitized independently, and the authenticated Scoutify binding
+        or scoped scoutifyUsername is used to resolve gc_um_id.
       tags:
         - Scoutify
       security:
@@ -4521,62 +4568,78 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - frc_season_master_sm_year
-                - competition_master_cm_event_code
-                - game_matchup_gm_game_type
-                - game_matchup_gm_number
-                - game_matchup_gm_alliance
-                - game_matchup_gm_alliance_position
-                - gc_comment
-              properties:
-                frc_season_master_sm_year:
-                  type: integer
-                  description: Season year
-                competition_master_cm_event_code:
-                  type: string
-                  description: Event code (e.g., ohcl)
-                game_matchup_gm_game_type:
-                  type: string
-                  description: Game type (e.g., Q)
-                game_matchup_gm_number:
-                  type: integer
-                  description: Match number
-                game_matchup_gm_alliance:
-                  type: string
-                  description: Alliance code (e.g., R or B)
-                game_matchup_gm_alliance_position:
-                  type: integer
-                  description: Alliance position (1-3)
-                gc_comment:
-                  type: string
-                  maxLength: 200
-                  description: Comment text. Special symbols and unsafe control characters are
-                    normalized/sanitized by backend.
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required:
+                  - frc_season_master_sm_year
+                  - competition_master_cm_event_code
+                  - game_matchup_gm_game_type
+                  - game_matchup_gm_number
+                  - game_matchup_gm_alliance
+                  - game_matchup_gm_alliance_position
+                  - gc_comment
+                properties:
+                  frc_season_master_sm_year:
+                    type: integer
+                    description: Season year
+                  competition_master_cm_event_code:
+                    type: string
+                    description: Event code (for example ohcl)
+                  game_matchup_gm_game_type:
+                    type: string
+                    description: Game type (for example Q)
+                  game_matchup_gm_number:
+                    type: integer
+                    description: Match number
+                  game_matchup_gm_alliance:
+                    type: string
+                    description: Alliance code (for example R or B)
+                  game_matchup_gm_alliance_position:
+                    type: integer
+                    description: Alliance position (1-3)
+                  gc_comment:
+                    type: string
+                    maxLength: 200
+                    description: Comment text. Special symbols and unsafe control
+                      characters are normalized or removed by backend sanitization.
+            example:
+              - frc_season_master_sm_year: 2025
+                competition_master_cm_event_code: ohcl
+                game_matchup_gm_game_type: Q
+                game_matchup_gm_number: 74
+                game_matchup_gm_alliance: R
+                game_matchup_gm_alliance_position: 2
+                gc_comment: Strong cycle speed from source side
+              - frc_season_master_sm_year: 2025
+                competition_master_cm_event_code: ohcl
+                game_matchup_gm_game_type: Q
+                game_matchup_gm_number: 75
+                game_matchup_gm_alliance: B
+                game_matchup_gm_alliance_position: 1
+                gc_comment: Defender slowed midfield traffic
       responses:
         "200":
-          description: Game comment created
+          description: Game comments created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostScoutifyGameCommentsSuccess"
               examples:
                 Created:
-                  summary: Comment created successfully
+                  summary: Comments created successfully
                   value:
                     success: true
-                    message: Game comment created
+                    message: Game comments created successfully
                     data:
-                      frc_season_master_sm_year: 2025
-                      competition_master_cm_event_code: ohcl
-                      game_matchup_gm_game_type: Q
-                      game_matchup_gm_number: 74
-                      game_matchup_gm_alliance: R
-                      game_matchup_gm_alliance_position: 2
-                      gc_comment: Spent entire game trying to score algae in processor
-                      gc_um_id: johnd
-                      gc_ts: 2025-04-05 13:47:47.382000
+                      - frc_season_master_sm_year: 2025
+                        competition_master_cm_event_code: ohcl
+                        game_matchup_gm_game_type: Q
+                        game_matchup_gm_number: 74
+                        game_matchup_gm_alliance: R
+                        game_matchup_gm_alliance_position: 2
+                        gc_comment: Strong cycle speed from source side
         "400":
           description: Bad request
           content:
@@ -4584,26 +4647,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
+                EmptyArray:
+                  summary: Array body missing
+                  value:
+                    success: false
+                    message: Expected a non-empty array of game comments
                 MissingFields:
-                  summary: Missing required fields
+                  summary: Missing required fields in one or more items
                   value:
                     success: false
-                    message: Missing required fields for game comment
+                    message: Missing required fields for one or more game comments
                 InvalidNumericFields:
-                  summary: Invalid numeric fields
+                  summary: Invalid numeric fields in one or more items
                   value:
                     success: false
-                    message: Invalid numeric fields for game comment
+                    message: Invalid numeric fields for one or more game comments
                 EmptyComment:
                   summary: Empty comment after trim/sanitize
                   value:
                     success: false
-                    message: gc_comment is required
+                    message: gc_comment is required in all comments
                 CommentTooLong:
                   summary: Comment too long after sanitization
                   value:
                     success: false
-                    message: gc_comment must be 200 characters or fewer after sanitization
+                    message: gc_comment must be 200 characters or fewer after sanitization in all comments
                 InvalidJsonPayload:
                   summary: Malformed JSON body
                   value:
@@ -4633,6 +4701,11 @@ paths:
                   value:
                     success: false
                     message: No Scoutify user binding found for current Casdoor user
+                UsernameNotFound:
+                  summary: Provided scoped username is not bound
+                  value:
+                    success: false
+                    message: No Scoutify user found for provided username
         "500":
           description: Server error
           content:
@@ -4641,10 +4714,68 @@ paths:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
                 CreateFailed:
-                  summary: Create game comment failed
+                  summary: Create game comments failed
                   value:
                     success: false
-                    message: Failed to create game comment
+                    message: Failed to create game comments
+  /scoutify/game-constants:
+    get:
+      summary: Get current Scoutify game constants
+      description: Read the first row from Scoutify game_constants. This is a
+        public read-only endpoint that exposes the active season, event, and
+        game type configuration used by the batch game detail uploader.
+      tags:
+        - Scoutify
+      responses:
+        "200":
+          description: Game constants retrieved
+          headers:
+            RateLimit-Limit:
+              description: Configured request limit for current rate-limit window
+              schema:
+                type: string
+            RateLimit-Remaining:
+              description: Remaining requests in current rate-limit window
+              schema:
+                type: string
+            RateLimit-Reset:
+              description: Seconds until current rate-limit window resets
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetScoutifyGameConstantsSuccess"
+              examples:
+                Success:
+                  value:
+                    success: true
+                    data:
+                      frc_season_master_sm_year: 2025
+                      competition_master_cm_event_code: ohcl
+                      game_matchup_gm_game_type: Q
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                TooManyRequests:
+                  value:
+                    success: false
+                    message: Too many Scoutify query requests per minute.
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorResponse"
+              examples:
+                DefaultError:
+                  value:
+                    success: false
+                    message: Failed to get game constants
   /scoutify/event-assignments:
     get:
       summary: Query current user event assignments
@@ -4669,6 +4800,16 @@ paths:
           name: teamNumber
           schema:
             type: integer
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, assignment scope resolves by username instead of the current authenticated user.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
+          description: Optional team number used with scoutifyUsername for disambiguation.
         - in: query
           name: limit
           schema:
@@ -4966,89 +5107,175 @@ paths:
                     message: Failed to verify admin privileges
   /scoutify/admin/game-details:
     post:
-      summary: Admin create game detail
-      description: Admin-only endpoint to create game_details rows
+      summary: Upload Scoutify game detail batch
+      description: Authenticated endpoint used by Scoutify clients to upload a
+        batch of match detail payloads. The backend reads the active season,
+        event code, and game type from game_constants, resolves the submitting
+        Scoutify user from the authenticated binding or scoped scoutifyUsername,
+        maps known Kotlin payload keys into many game_details rows, and returns
+        the original payload array.
       tags:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
           schema:
             type: string
-          description: Optional Scoutify username. Used to resolve gd_um_id when body omits gd_um_id.
+          description: Optional Scoutify username. When provided, the uploaded batch is attributed to that bound Scoutify user instead of the current authenticated user.
         - in: query
           name: scoutifyUserTeamNumber
           schema:
             type: integer
-          description: Optional team number for username disambiguation.
+          description: Optional team number used with scoutifyUsername for disambiguation.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - frc_season_master_sm_year
-                - competition_master_cm_event_code
-                - game_matchup_gm_game_type
-                - game_matchup_gm_number
-                - game_matchup_gm_alliance
-                - game_matchup_gm_alliance_position
-                - game_element_group_geg_grp_key
-                - game_element_ge_key
-                - gd_value
-              properties:
-                frc_season_master_sm_year:
-                  type: integer
-                  description: Season year
-                competition_master_cm_event_code:
-                  type: string
-                  description: Event code (e.g., 2025ohcl)
-                game_matchup_gm_game_type:
-                  type: string
-                  description: Game type (e.g., qual, playoff)
-                game_matchup_gm_number:
-                  type: integer
-                  description: Match number
-                game_matchup_gm_alliance:
-                  type: string
-                  enum:
-                    - red
-                    - blue
-                  description: Alliance color
-                game_matchup_gm_alliance_position:
-                  type: integer
-                  description: Position in alliance (1-3)
-                game_element_group_geg_grp_key:
-                  type: integer
-                  description: Game element group key
-                game_element_ge_key:
-                  type: integer
-                  description: Game element key
-                gd_value:
-                  type: number
-                  description: Scored value
-                gd_um_id:
-                  type: string
-                  description: Scoutify user ID who scored. Provide this or gd_um_name.
-                gd_um_name:
-                  type: string
-                  description: Scoutify username (user_master.um_name). Used to resolve gd_um_id when gd_um_id is not provided.
-                user_tm_number:
-                  type: integer
-                  description: Optional team number to disambiguate gd_um_name resolution.
-                gd_score:
-                  type: number
-                  description: Optional score adjustment
-                gd_auton_path:
-                  type: string
-                  nullable: true
-                  description: Optional auton path data
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required:
+                  - matchNumber
+                  - alliance
+                  - alliancePosition
+                properties:
+                  matchNumber:
+                    type: integer
+                    description: Match number for the scouted robot.
+                  alliance:
+                    type: string
+                    description: Alliance code submitted by the Kotlin client, such as R or B.
+                  alliancePosition:
+                    type: integer
+                    description: Alliance position (1-3).
+                  startingLocation:
+                    type: integer
+                  robotOnField:
+                    type: boolean
+                  robotPreloaded:
+                    type: boolean
+                  autonPath:
+                    type: string
+                    nullable: true
+                  autonAttemptsClimb:
+                    type: boolean
+                  autonClimbSuccess:
+                    type: boolean
+                  autonClimbPosition:
+                    type: string
+                    nullable: true
+                  autonFuelCount:
+                    type: integer
+                  transitionFirstActive:
+                    type: integer
+                  transitionCyclingTime:
+                    type: integer
+                  transitionStockpilingTime:
+                    type: integer
+                  transitionDefendingTime:
+                    type: integer
+                  transitionBrokenTime:
+                    type: integer
+                  shift1CyclingTime:
+                    type: integer
+                  shift1StockpilingTime:
+                    type: integer
+                  shift1DefendingTime:
+                    type: integer
+                  shift1BrokenTime:
+                    type: integer
+                  shift2CyclingTime:
+                    type: integer
+                  shift2StockpilingTime:
+                    type: integer
+                  shift2DefendingTime:
+                    type: integer
+                  shift2BrokenTime:
+                    type: integer
+                  shift3CyclingTime:
+                    type: integer
+                  shift3StockpilingTime:
+                    type: integer
+                  shift3DefendingTime:
+                    type: integer
+                  shift3BrokenTime:
+                    type: integer
+                  shift4CyclingTime:
+                    type: integer
+                  shift4StockpilingTime:
+                    type: integer
+                  shift4DefendingTime:
+                    type: integer
+                  shift4BrokenTime:
+                    type: integer
+                  endgameCyclingTime:
+                    type: integer
+                  endgameStockpilingTime:
+                    type: integer
+                  endgameDefendingTime:
+                    type: integer
+                  endgameBrokenTime:
+                    type: integer
+                  endgameAttemptsClimb:
+                    type: boolean
+                  endgameClimbSuccess:
+                    type: boolean
+                  endgameClimbPosition:
+                    type: string
+                    nullable: true
+                  teleopFuelCount:
+                    type: integer
+                  postgameShootAnywhere:
+                    type: boolean
+                  postgameShootWhileMoving:
+                    type: boolean
+                  postgameStockpileNeutral:
+                    type: boolean
+                  postgameStockpileAlliance:
+                    type: boolean
+                  postgameStockpileCrossCourt:
+                    type: boolean
+                  postgameFeedOutpost:
+                    type: boolean
+                  postgameReceiveOutpost:
+                    type: boolean
+                  postgameUnderTrench:
+                    type: boolean
+                  postgameOverBump:
+                    type: boolean
+                  pregameFlag:
+                    type: boolean
+                  autonFlag:
+                    type: boolean
+                  teleopFlag:
+                    type: boolean
+                  postgameFlag:
+                    type: boolean
+            example:
+              - matchNumber: 74
+                alliance: R
+                alliancePosition: 2
+                startingLocation: 3
+                robotOnField: true
+                robotPreloaded: true
+                autonPath: source-middle
+                autonFuelCount: 4
+                transitionCyclingTime: 18
+                shift1CyclingTime: 22
+                endgameAttemptsClimb: true
+                endgameClimbSuccess: true
+                teleopFuelCount: 17
+                postgameShootAnywhere: true
+                pregameFlag: false
       responses:
         "200":
-          description: Game detail created
+          description: Game detail batch accepted
           content:
             application/json:
               schema:
@@ -5058,6 +5285,12 @@ paths:
                   value:
                     success: true
                     message: Game detail created
+                    data:
+                      - matchNumber: 74
+                        alliance: R
+                        alliancePosition: 2
+                        startingLocation: 3
+                        robotOnField: true
         "401":
           description: Unauthorized
           content:
@@ -5069,17 +5302,21 @@ paths:
                   value:
                     success: false
                     message: Unauthorized
-        "403":
-          description: Admin privileges required
+        "404":
+          description: No Scoutify binding found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiErrorResponse"
               examples:
-                DefaultError:
+                UsernameNotFound:
                   value:
                     success: false
-                    message: Forbidden
+                    message: Scoutify user not found by username
+                BoundUserNotFound:
+                  value:
+                    success: false
+                    message: No Scoutify user binding found for current Casdoor user
         "500":
           description: Server error
           content:
@@ -5090,7 +5327,7 @@ paths:
                 DefaultError:
                   value:
                     success: false
-                    message: Server error
+                    message: Failed to create game detail
     put:
       summary: Admin update game detail
       description: Admin-only endpoint to update game_details rows
@@ -5098,6 +5335,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
@@ -5239,6 +5478,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
@@ -5352,6 +5593,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
@@ -5445,6 +5688,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
@@ -5548,6 +5793,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: query
           name: scoutifyUsername
@@ -5658,11 +5905,24 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: taskId
           required: true
           schema:
+            type: integer
+          description: Event task primary key.
+        - in: query
+          name: scoutifyUsername
+          schema:
+            type: string
+          description: Optional Scoutify username. When provided, update is scoped to that user's task row.
+        - in: query
+          name: scoutifyUserTeamNumber
+          schema:
+            type: integer
           description: Optional team number for username disambiguation.
       requestBody:
         required: true
@@ -5757,6 +6017,8 @@ paths:
         - Scoutify
       security:
         - bearerAuth: []
+        - apiKeyAuth: []
+          apiSecretAuth: []
       parameters:
         - in: path
           name: taskId
