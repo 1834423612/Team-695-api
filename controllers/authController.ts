@@ -46,7 +46,7 @@ class AuthController {
             if (apiKey && apiSecret) {
                 try {
                     const casdoorRes = await axios.get(
-                        `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
+                        `${casdoorConfig.endpoint}/api/user?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
                     );
 
                     // Forward Casdoor's Set-Cookie to client if present

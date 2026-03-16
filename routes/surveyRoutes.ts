@@ -22,6 +22,25 @@ interface Images {
     driveTrainImages: ImageData[];
 }
 
+const getQueryValue = (query: Record<string, any>, keys: string[]) => {
+    for (const key of keys) {
+        const value = query[key];
+        if (Array.isArray(value)) {
+            const first = value.find((item) => typeof item === 'string' && item.trim());
+            if (typeof first === 'string') {
+                return first.trim();
+            }
+            continue;
+        }
+
+        if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+        }
+    }
+
+    return undefined;
+}
+
 // Apply verifyToken middleware to routes requiring authentication
 router.use('/submit', verifyToken);
 router.use('/query', verifyToken);
@@ -92,7 +111,9 @@ router.post('/submit', async (req, res) => {
         Query by teamNumber: GET /api/survey/query?teamNumber=89898899
 */ 
 router.get('/query', async (req, res) => {
-    const { eventId, formId, teamNumber } = req.query;
+    const eventId = getQueryValue(req.query as Record<string, any>, ['eventId', 'eventid', 'event_id']);
+    const formId = getQueryValue(req.query as Record<string, any>, ['formId', 'formid', 'form_id']);
+    const teamNumber = getQueryValue(req.query as Record<string, any>, ['teamNumber', 'teamnumber', 'team_number']);
 
     let query = 'SELECT id, event_id, form_id, data, upload, user_data, user_agent, ip, language, timestamp FROM survey_responses WHERE 1=1';
     const queryParams: any[] = [];
@@ -108,8 +129,8 @@ router.get('/query', async (req, res) => {
     }
 
     if (teamNumber) {
-        query += ' AND JSON_EXTRACT(data, "$.teamNumber") = ?';
-        queryParams.push(teamNumber);
+        query += ' AND JSON_UNQUOTE(JSON_EXTRACT(data, "$.teamNumber")) = ?';
+        queryParams.push(String(teamNumber));
     }
 
     try {

@@ -15,6 +15,8 @@ declare global {
             token?: string
             decodedToken?: any
             apiAuthenticated?: boolean
+            apiAuthAttempted?: boolean
+            apiAuthError?: string
         }
     }
 }
@@ -23,6 +25,7 @@ declare global {
  * Combined authentication middleware - tries API Key first, falls back to JWT
  */
 export const verifyToken = [
+    verifyApiKey,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             // If already authenticated via API Key, continue
@@ -50,6 +53,9 @@ export const verifyToken = [
 
             // No token found, return unauthorized
             if (!token) {
+                if (req.apiAuthAttempted && req.apiAuthError) {
+                    return unauthorized(res, req.apiAuthError)
+                }
                 return unauthorized(res, "No authentication token provided")
             }
 
@@ -182,7 +188,6 @@ export const verifyToken = [
             return unauthorized(res, "Failed to verify token")
         }
     },
-    //verifyApiKey,
 ]
 
 /**

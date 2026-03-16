@@ -10,6 +10,106 @@ class AuthService {
         this.sdk = new SDK(casdoorConfig)
     }
 
+    private buildApiKeyAuthQuery(apiKey: string, apiSecret: string) {
+        return new URLSearchParams({
+            accessKey: apiKey,
+            accessSecret: apiSecret,
+        }).toString()
+    }
+
+    private extractCasdoorPayload(responseData: any) {
+        const payload = responseData?.data !== undefined ? responseData.data : responseData
+        if (Array.isArray(payload)) {
+            return payload[0] || {}
+        }
+        return payload || {}
+    }
+
+    private normalizeCasdoorUser(userData: any) {
+        const nestedData = userData?.data && typeof userData.data === "object" ? userData.data : {}
+        const roles = Array.isArray(userData?.roles)
+            ? userData.roles
+            : Array.isArray(nestedData?.roles)
+                ? nestedData.roles
+                : []
+        const groups = Array.isArray(userData?.groups)
+            ? userData.groups
+            : Array.isArray(nestedData?.groups)
+                ? nestedData.groups
+                : []
+        const permissions = Array.isArray(userData?.permissions)
+            ? userData.permissions
+            : Array.isArray(nestedData?.permissions)
+                ? nestedData.permissions
+                : []
+
+        return {
+            id: userData?.sub || userData?.id || userData?.userId || userData?.account || userData?.name || '',
+            name: userData?.name || userData?.displayName || userData?.username || '',
+            email: userData?.email || nestedData?.email || '',
+            username: userData?.preferred_username || userData?.username || userData?.name || '',
+            displayName: nestedData?.displayName || userData?.displayName || userData?.name || '',
+            avatar: nestedData?.avatar || userData?.avatar || '',
+            isAdmin:
+                userData?.isAdmin === true ||
+                nestedData?.isAdmin === true ||
+                userData?.tag === "admin" ||
+                roles.some((role: any) => role?.name === "admin") ||
+                groups.includes("admin") ||
+                groups.includes("Team695/admin"),
+            role: userData?.role || nestedData?.role || '',
+            groups,
+            permissions,
+            owner: userData?.owner || nestedData?.owner || casdoorConfig.orgName,
+            raw: userData,
+        }
+    }
+
+    private async getCurrentUserPayloadWithApiKey(apiKey: string, apiSecret: string) {
+        const authQuery = this.buildApiKeyAuthQuery(apiKey, apiSecret)
+
+        const response = await axios.get(
+            `${casdoorConfig.endpoint}/api/user?${authQuery}`,
+            {
+                timeout: 3000,
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+
+        if (response.status !== 200 || response.data?.status === "error") {
+            throw new Error(response.data?.msg || "Invalid API credentials")
+        }
+
+        let payload = this.extractCasdoorPayload(response.data)
+        const userName = payload?.name || payload?.preferred_username || payload?.username
+        const userOwner = payload?.owner || payload?.data?.owner || casdoorConfig.orgName
+
+        if (userName) {
+            try {
+                const fullUserId = `${userOwner}/${userName}`
+                const fullUserResponse = await axios.get(
+                    `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullUserId)}&${authQuery}`,
+                    {
+                        timeout: 3000,
+                    }
+                )
+
+                if (fullUserResponse.status === 200 && fullUserResponse.data?.status === "ok" && fullUserResponse.data?.data) {
+                    payload = {
+                        ...payload,
+                        ...this.extractCasdoorPayload(fullUserResponse.data),
+                    }
+                }
+            } catch (error: any) {
+                console.warn("Failed to enrich API key user with full Casdoor profile:", error?.message || error)
+            }
+        }
+
+        return payload
+    }
+
     /**
      * Parse JWT token to get user information
      */
@@ -82,40 +182,11 @@ class AuthService {
      */
     async getUserInfoWithApiKey(apiKey: string, apiSecret: string) {
         try {
-            // Call Casdoor API using URL parameters as per documentation
-            const response = await axios.get(
-                `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
-            );
-
-            if (response.status !== 200 || response.data.status !== "ok") {
-                throw new Error("Invalid API credentials");
-            }
-            
-            const userData = response.data;
-            
-            // Create user object with similar structure to JWT authentication
-            const user = {
-                id: userData.sub || userData.id || '',
-                name: userData.name || '',
-                email: userData.data?.email || userData.email || '',
-                username: userData.name || '',
-                displayName: userData.data?.displayName || userData.name || '',
-                avatar: userData.data?.avatar || '',
-                // Check admin permissions
-                isAdmin: 
-                    userData.data?.isAdmin === true || 
-                    (userData.data?.roles && userData.data.roles.some((r: any) => r.name === "admin")) ||
-                    (userData.data?.groups && userData.data.groups.includes("Team695/admin")),
-                role: userData.data?.role || '',
-                groups: userData.data?.groups || [],
-                permissions: userData.data?.permissions || [],
-                owner: userData.data?.owner || casdoorConfig.orgName,
-            };
-
-            return user;
+            const userData = await this.getCurrentUserPayloadWithApiKey(apiKey, apiSecret)
+            return this.normalizeCasdoorUser(userData)
         } catch (error) {
-            console.error("Error getting user info with API Key:", error);
-            throw error;
+            console.error("Error getting user info with API Key:", error)
+            throw error
         }
     }
 
@@ -419,28 +490,17 @@ class AuthService {
      */
     async getAllUsersWithApiKey(apiKey: string, apiSecret: string, pageSize = 100, pageNumber = 1, sortField = '', sortOrder = '') {
         try {
-            // First get account info to verify admin status and get correct owner
-            console.log("Getting account info to verify admin status");
-            const accountResponse = await axios.get(
-                `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
-            );
-            
-            if (accountResponse.status !== 200 || accountResponse.data?.status !== "ok") {
-                throw new Error("Failed to verify account information");
-            }
-            
-            // Extract user info from response
-            const userData = accountResponse.data;
-            const userOwner = userData.data?.owner || casdoorConfig.orgName;
-            const isAdmin = userData.data?.isAdmin === true || 
-                (userData.data?.groups?.groups.includes("Team695/admin"));
-            
+            console.log("Getting current API key user to verify admin status")
+            const currentUser = await this.getUserInfoWithApiKey(apiKey, apiSecret)
+            const userOwner = currentUser.owner || casdoorConfig.orgName
+            const isAdmin = this.isUserAdminSafe(currentUser)
+
             if (!isAdmin) {
-                throw new Error("Only administrators can access user list");
+                throw new Error("Only administrators can access user list")
             }
-            
-            console.log(`User verified as admin. Using owner: ${userOwner}`);
-            
+
+            console.log(`User verified as admin. Using owner: ${userOwner}`)
+
             // Build query parameters with the correct owner
             const params = new URLSearchParams({
                 owner: userOwner,
@@ -448,40 +508,40 @@ class AuthService {
                 p: pageNumber.toString(),
                 accessKey: apiKey,
                 accessSecret: apiSecret
-            });
-            
+            })
+
             // Add optional sort parameters
-            if (sortField) params.append("sortField", sortField);
-            if (sortOrder) params.append("sortOrder", sortOrder);
-            
+            if (sortField) params.append("sortField", sortField)
+            if (sortOrder) params.append("sortOrder", sortOrder)
+
             // Call Casdoor API to get users
-            const url = `${casdoorConfig.endpoint}/api/get-users?${params.toString()}`;
-            console.log(`Requesting users from: ${url}`);
-            
-            const response = await axios.get(url);
+            const url = `${casdoorConfig.endpoint}/api/get-users?${params.toString()}`
+            console.log(`Requesting users from: ${url}`)
+
+            const response = await axios.get(url)
 
             // Handle potential error responses where the status is 200 but there's an error in the body
             if (response.data?.status === "error") {
-                console.error("Casdoor API returned error:", response.data);
-                throw new Error(response.data?.msg || "Failed to retrieve users: API returned error");
+                console.error("Casdoor API returned error:", response.data)
+                throw new Error(response.data?.msg || "Failed to retrieve users: API returned error")
             }
-            
+
             if (response.status !== 200 || response.data?.status !== "ok") {
-                throw new Error(`Failed to retrieve users: ${response.statusText || "Unknown error"}`);
+                throw new Error(`Failed to retrieve users: ${response.statusText || "Unknown error"}`)
             }
 
             return {
                 success: true,
                 data: response.data,
                 message: "Users retrieved successfully"
-            };
+            }
         } catch (error) {
-            console.error("Error retrieving users with API Key:", error);
+            console.error("Error retrieving users with API Key:", error)
             return { 
                 success: false, 
                 error: (error as Error).message,
                 message: "Failed to retrieve users"
-            };
+            }
         }
     }
 
@@ -634,21 +694,10 @@ class AuthService {
      */
     async getCurrentUserWithApiKey(apiKey: string, apiSecret: string): Promise<any> {
         try {
-            const response = await axios.get(
-                `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`
-            );
-            
-            if (response.status === 200 && response.data.status === "ok") {
-                return {
-                    id: response.data.sub || response.data.id,
-                    name: response.data.name,
-                    ...response.data.data
-                };
-            }
-            throw new Error("Failed to get current user info");
+            return await this.getUserInfoWithApiKey(apiKey, apiSecret)
         } catch (err) {
-            console.error("Error getting current user with API Key:", err);
-            throw err;
+            console.error("Error getting current user with API Key:", err)
+            throw err
         }
     }
 
@@ -678,12 +727,15 @@ class AuthService {
             let allUsers: any[] = [];
             let pageNum = 1;
             let hasMore = true;
+            const apiKeyOwner = apiKey && apiSecret
+                ? (await this.getCurrentUserWithApiKey(apiKey, apiSecret)).owner || casdoorConfig.orgName
+                : casdoorConfig.orgName;
 
             while (hasMore) {
                 let response;
                 if (apiKey && apiSecret) {
                     response = await axios.get(
-                        `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=${pageSize}&p=${pageNum}&accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`);
+                        `${casdoorConfig.endpoint}/api/get-users?owner=${encodeURIComponent(apiKeyOwner)}&pageSize=${pageSize}&p=${pageNum}&accessKey=${encodeURIComponent(apiKey)}&accessSecret=${encodeURIComponent(apiSecret)}`);
                 } else if (token) {
                     response = await axios.get(
                         `${casdoorConfig.endpoint}/api/get-users?owner=${casdoorConfig.orgName}&pageSize=${pageSize}&p=${pageNum}`,
@@ -831,18 +883,9 @@ class AuthService {
             } else if (authApiKey && authApiSecret) {
                 // Get complete user info with API Key
                 try {
-                    // Get basic account info first
-                    const accountResponse = await axios.get(
-                        `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
-                    );
-                    
-                    if (accountResponse.data?.status !== "ok") {
-                        throw new Error("Failed to get account info");
-                    }
-                    
-                    const basicUserInfo = accountResponse.data;
+                    const basicUserInfo = await this.getCurrentUserWithApiKey(authApiKey, authApiSecret)
                     const userName = basicUserInfo.name;
-                    const userOwner = basicUserInfo.data?.owner || casdoorConfig.orgName;
+                    const userOwner = basicUserInfo.owner || casdoorConfig.orgName;
                     const fullId = `${userOwner}/${userName}`;
                     
                     console.log(`Retrieved basic account info. Username: ${userName}, Owner: ${userOwner}`);
@@ -958,26 +1001,15 @@ class AuthService {
                         currentApiKeyInfo = meResponse.data.data;
                     }
                 } else if (authApiKey && authApiSecret) {
-                    // For API Key authentication, we need to get a fresh account info
-                    // Note: This will likely still return the old API key that was used for the request
-                    const accountResponse = await axios.get(
-                        `${casdoorConfig.endpoint}/api/get-account?accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
-                    );
-                    
-                    if (accountResponse.data?.status === "ok") {
-                        // Try to get updated user information with the account API
-                        const userName = accountResponse.data.name;
-                        const userOwner = accountResponse.data.data?.owner || casdoorConfig.orgName;
-                        const fullId = `${userOwner}/${userName}`;
-                        
-                        // Make one more attempt to get the user with the API key
-                        const userResponse = await axios.get(
-                            `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}&accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
-                        );
-                        
-                        if (userResponse.data?.status === "ok" && userResponse.data.data) {
-                            currentApiKeyInfo = userResponse.data.data;
-                        }
+                    const apiKeyUser = await this.getCurrentUserWithApiKey(authApiKey, authApiSecret)
+                    const fullId = `${apiKeyUser.owner || casdoorConfig.orgName}/${apiKeyUser.name}`
+
+                    const userResponse = await axios.get(
+                        `${casdoorConfig.endpoint}/api/get-user?id=${encodeURIComponent(fullId)}&accessKey=${encodeURIComponent(authApiKey)}&accessSecret=${encodeURIComponent(authApiSecret)}`
+                    )
+
+                    if (userResponse.data?.status === "ok" && userResponse.data.data) {
+                        currentApiKeyInfo = userResponse.data.data
                     }
                 }
                 
