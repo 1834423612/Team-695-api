@@ -16,7 +16,7 @@ class AssignmentController {
             }
 
             // Check if user is admin
-            if (!req.user.isAdmin) {
+            if (!authService.isUserAdminSafe(req.user)) {
                 return error(res, 403, 'Admin privileges required');
             }
 
@@ -71,7 +71,7 @@ class AssignmentController {
             }
 
             // Check if user is admin
-            if (!req.user.isAdmin) {
+            if (!authService.isUserAdminSafe(req.user)) {
                 return error(res, 403, 'Admin privileges required');
             }
 
@@ -125,7 +125,7 @@ class AssignmentController {
             }
 
             // Check if user is admin
-            if (!req.user.isAdmin) {
+            if (!authService.isUserAdminSafe(req.user)) {
                 return error(res, 403, 'Admin privileges required');
             }
 
@@ -154,7 +154,7 @@ class AssignmentController {
             }
 
             // Check if user is admin
-            if (!req.user.isAdmin) {
+            if (!authService.isUserAdminSafe(req.user)) {
                 return error(res, 403, 'Admin privileges required');
             }
 

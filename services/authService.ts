@@ -25,23 +25,68 @@ class AuthService {
         return payload || {}
     }
 
+    private normalizeStringArray(value: any): string[] {
+        if (!Array.isArray(value)) {
+            return []
+        }
+
+        return value
+            .map((item) => {
+                if (typeof item === "string") {
+                    return item.trim()
+                }
+                if (item && typeof item.name === "string") {
+                    return item.name.trim()
+                }
+                if (item && typeof item.displayName === "string") {
+                    return item.displayName.trim()
+                }
+                return ""
+            })
+            .filter((item) => item.length > 0)
+    }
+
+    private valueLooksAdmin(value: string) {
+        const normalized = value.trim().toLowerCase()
+        return normalized === "admin"
+            || normalized === "team695/admin"
+            || normalized === "super_admin"
+            || normalized === "admin_role"
+            || normalized === "administrator"
+            || normalized.endsWith("/admin")
+            || normalized.includes("admin")
+    }
+
+    private resolveAdminAccess(userData: any) {
+        const nestedData = userData?.data && typeof userData.data === "object" ? userData.data : {}
+        const groups = this.normalizeStringArray(userData?.groups).concat(this.normalizeStringArray(nestedData?.groups))
+        const roles = this.normalizeStringArray(userData?.roles).concat(this.normalizeStringArray(nestedData?.roles))
+        const permissions = this.normalizeStringArray(userData?.permissions).concat(this.normalizeStringArray(nestedData?.permissions))
+        const role = typeof userData?.role === "string"
+            ? userData.role
+            : typeof nestedData?.role === "string"
+                ? nestedData.role
+                : ""
+
+        const isAdmin = userData?.isAdmin === true
+            || nestedData?.isAdmin === true
+            || this.valueLooksAdmin(role)
+            || groups.some((group) => this.valueLooksAdmin(group))
+            || roles.some((roleName) => this.valueLooksAdmin(roleName))
+            || permissions.some((permission) => this.valueLooksAdmin(permission) || permission === "*")
+
+        return {
+            isAdmin,
+            groups: [...new Set(groups)],
+            roles: [...new Set(roles)],
+            permissions: [...new Set(permissions)],
+            role,
+        }
+    }
+
     private normalizeCasdoorUser(userData: any) {
         const nestedData = userData?.data && typeof userData.data === "object" ? userData.data : {}
-        const roles = Array.isArray(userData?.roles)
-            ? userData.roles
-            : Array.isArray(nestedData?.roles)
-                ? nestedData.roles
-                : []
-        const groups = Array.isArray(userData?.groups)
-            ? userData.groups
-            : Array.isArray(nestedData?.groups)
-                ? nestedData.groups
-                : []
-        const permissions = Array.isArray(userData?.permissions)
-            ? userData.permissions
-            : Array.isArray(nestedData?.permissions)
-                ? nestedData.permissions
-                : []
+        const adminAccess = this.resolveAdminAccess(userData)
 
         return {
             id: userData?.sub || userData?.id || userData?.userId || userData?.account || userData?.name || '',
@@ -50,19 +95,18 @@ class AuthService {
             username: userData?.preferred_username || userData?.username || userData?.name || '',
             displayName: nestedData?.displayName || userData?.displayName || userData?.name || '',
             avatar: nestedData?.avatar || userData?.avatar || '',
-            isAdmin:
-                userData?.isAdmin === true ||
-                nestedData?.isAdmin === true ||
-                userData?.tag === "admin" ||
-                roles.some((role: any) => role?.name === "admin") ||
-                groups.includes("admin") ||
-                groups.includes("Team695/admin"),
-            role: userData?.role || nestedData?.role || '',
-            groups,
-            permissions,
+            isAdmin: adminAccess.isAdmin,
+            role: adminAccess.role,
+            groups: adminAccess.groups,
+            roles: adminAccess.roles,
+            permissions: adminAccess.permissions,
             owner: userData?.owner || nestedData?.owner || casdoorConfig.orgName,
             raw: userData,
         }
+    }
+
+    buildAuthenticatedUser(userData: any) {
+        return this.normalizeCasdoorUser(userData)
     }
 
     private async getCurrentUserPayloadWithApiKey(apiKey: string, apiSecret: string) {
@@ -338,26 +382,7 @@ class AuthService {
      * Check if user is admin
      */
     isUserAdmin(decodedToken: DecodedToken): boolean {
-        const payload = decodedToken.payload
-
-        // Check for admin role in token
-        if (payload.role === "admin" || payload.isAdmin === true) {
-            return true
-        }
-
-        // Check if user is in admin group
-        if (payload.groups && Array.isArray(payload.groups)) {
-            return payload.groups.includes("admin") || payload.groups.includes("Team695/admin")
-        }
-
-        // Check if user has admin permissions
-        if (payload.permissions && Array.isArray(payload.permissions)) {
-            return payload.permissions.some(
-                (p: string | any) => typeof p === "string" && (p.includes("admin") || p.includes("Admin") || p === "*")
-            )
-        }
-
-        return false
+        return this.resolveAdminAccess(decodedToken.payload).isAdmin
     }
 
     /**
@@ -368,28 +393,8 @@ class AuthService {
         if (userData && userData.payload) {
             return this.isUserAdmin(userData);
         }
-        
-        // If receiving user data directly
-        if (userData) {
-            // Check admin role
-            if (userData.role === "admin" || userData.isAdmin === true) {
-                return true;
-            }
 
-            // Check if user is in admin group
-            if (userData.groups && Array.isArray(userData.groups)) {
-                return userData.groups.includes("admin") || userData.groups.includes("Team695/admin");
-            }
-
-            // Check if user has admin permissions
-            if (userData.permissions && Array.isArray(userData.permissions)) {
-                return userData.permissions.some(
-                    (p: string | any) => typeof p === "string" && (p.includes("admin") || p.includes("Admin") || p === "*")
-                );
-            }
-        }
-
-        return false;
+        return this.resolveAdminAccess(userData).isAdmin;
     }
 
     /**
@@ -425,9 +430,7 @@ class AuthService {
                         let accountPayload = accountRes.data?.data || accountRes.data || {}
                         if (Array.isArray(accountPayload) && accountPayload.length > 0) accountPayload = accountPayload[0]
 
-                        const isAdminAccount = accountPayload.isAdmin === true || accountPayload.tag === 'admin' || (accountPayload.groups && (
-                            accountPayload.groups.includes('Team695/admin') || accountPayload.groups.includes('admin')
-                        ))
+                        const isAdminAccount = this.isUserAdminSafe(accountPayload)
 
                         if (!isAdminAccount) {
                             throw new Error("Only administrators can access user list")

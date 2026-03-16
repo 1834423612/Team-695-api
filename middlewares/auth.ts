@@ -72,7 +72,7 @@ export const verifyToken = [
                 const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
                 const response = await axios.get(
-                    `${casdoorConfig.endpoint}/api/user`,
+                    `${casdoorConfig.endpoint}/api/userinfo`,
                     {
                         timeout: 3000,
                         headers: {
@@ -84,7 +84,7 @@ export const verifyToken = [
                 );
 
                 // If Casdoor validates successfully, build req.user from response data
-                if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
+                if (response.status === 200 && response.data) {
                     let payload: any = response.data?.data || response.data || {};
 
                     // If Casdoor returned an array (e.g. data: [ { user } ]), take first element
@@ -93,7 +93,7 @@ export const verifyToken = [
                     }
 
                     // If payload lacks admin/groups info, try to fetch full account via /api/get-user
-                    const needsFullAccount = !(payload.isAdmin === true) && (!payload.groups || payload.groups.length === 0);
+                    const needsFullAccount = !authService.isUserAdminSafe(payload) && (!payload.groups || payload.groups.length === 0);
                     if (needsFullAccount) {
                         try {
                             // determine username and owner
@@ -124,20 +124,7 @@ export const verifyToken = [
                         }
                     }
 
-                    // Normalize user object safely
-                    const user = {
-                        id: payload.sub || payload.id || payload.userId || payload.account || payload.name || '',
-                        name: payload.name || payload.displayName || payload.username || '',
-                        email: payload.email || payload.data?.email || payload.properties?.oauth_Google_email || '',
-                        username: payload.preferred_username || payload.username || payload.name || '',
-                        displayName: payload.data?.displayName || payload.displayName || payload.name || '',
-                        avatar: payload.data?.avatar || payload.avatar || payload.properties?.oauth_Google_avatarUrl || '',
-                        isAdmin: payload.isAdmin === true || payload.data?.isAdmin === true || payload.tag === 'admin' || false,
-                        groups: payload.groups || payload.data?.groups || payload.properties?.groups || [],
-                        role: payload.role || payload.data?.role || '',
-                        owner: payload.owner || payload.data?.owner || casdoorConfig.orgName,
-                        raw: payload
-                    } as any;
+                    const user = authService.buildAuthenticatedUser(payload)
 
                     req.user = user;
                     req.token = token;
@@ -170,7 +157,7 @@ export const verifyToken = [
                         }
 
                         req.decodedToken = decodedToken
-                        req.user = decodedToken.payload
+                        req.user = authService.buildAuthenticatedUser(decodedToken.payload)
                         req.token = token
 
                         console.log('Using local token parsing due to remote validation failure')
@@ -201,32 +188,16 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction) =>
 
         let isAdmin = false;
 
-        // For API Key authentication
-        if (req.apiAuthenticated) {
-            isAdmin = req.user.isAdmin === true || 
-                (req.user.groups && (
-                    req.user.groups.includes("admin") || 
-                    req.user.groups.includes("Team695/admin")
-                ));
-        } 
-        // For JWT authentication
-        else {
-            isAdmin =
-                req.user.role === "admin" ||
-                req.user.isAdmin === true ||
-                (req.user.groups && (
-                    req.user.groups.includes("admin") ||
-                    req.user.groups.includes("Team695/admin")
-                ));
-        }
+        isAdmin = authService.isUserAdminSafe(req.user)
 
         if (!isAdmin) {
             // Debug: print a concise snapshot of the user for troubleshooting admin checks
             try {
                 const snapshot = {
                     isAdmin: req.user?.isAdmin,
-                    tag: req.user?.tag || req.user?.raw?.tag,
                     groups: req.user?.groups || req.user?.raw?.groups,
+                    roles: req.user?.roles || req.user?.raw?.roles,
+                    permissions: req.user?.permissions || req.user?.raw?.permissions,
                     role: req.user?.role || req.user?.raw?.role,
                     keys: Object.keys(req.user || {}).slice(0, 20)
                 }
@@ -299,7 +270,7 @@ export const optionalAuth = [
                 const cookieHeader = hasCasdoorToken ? incomingCookies : `${incomingCookies ? incomingCookies + '; ' : ''}casdoor-token=${token}`;
 
                 const response = await axios.get(
-                    `${casdoorConfig.endpoint}/api/user`,
+                    `${casdoorConfig.endpoint}/api/userinfo`,
                     {
                         timeout: 3000,
                         headers: {
@@ -310,10 +281,10 @@ export const optionalAuth = [
                     }
                 );
 
-                if (response.status === 200 && (response.data?.status === 'ok' || response.data)) {
+                if (response.status === 200 && response.data) {
                     let payload: any = response.data?.data || response.data || {}
                     if (Array.isArray(payload) && payload.length > 0) payload = payload[0]
-                    req.user = payload
+                    req.user = authService.buildAuthenticatedUser(payload)
                     req.decodedToken = { payload }
                     return next()
                 }
@@ -328,7 +299,7 @@ export const optionalAuth = [
                             return next()
                         }
                         req.decodedToken = decodedToken
-                        req.user = decodedToken.payload
+                        req.user = authService.buildAuthenticatedUser(decodedToken.payload)
                         return next()
                     } catch (parseErr) {
                         console.error('Optional local parse fallback failed:', parseErr)
