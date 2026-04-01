@@ -25,7 +25,9 @@ CREATE TABLE
         id INT AUTO_INCREMENT PRIMARY KEY,
         team_number VARCHAR(255) NOT NULL,
         team_name VARCHAR(255) NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_team_number_lookup (team_number),
+        INDEX idx_team_name_lookup (team_name)
     );
 
 CREATE TABLE

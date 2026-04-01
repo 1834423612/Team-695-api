@@ -3238,10 +3238,23 @@ paths:
   /team/teams:
     get:
       summary: Get list of teams
-      description: Retrieve a list of all teams with their numbers and names
+      description: Retrieve teams by team number or team name. The generic `query`
+        parameter performs prefix search with a minimum length of 2 characters to
+        reduce unnecessary database load. Numeric queries are ranked by exact
+        match first, then shorter matching team numbers before longer ones, so a
+        query like `69` returns `69`, `690`, `691`, `692`, then `6900`, `6901`,
+        and so on.
       tags:
         - Teams
       parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+            minLength: 2
+          description: Prefix search against `team_number` or `team_name`. For
+            performance, the backend returns an empty array when this value is
+            shorter than 2 characters and no exact filters are supplied.
         - in: query
           name: limit
           schema:
@@ -3259,7 +3272,7 @@ paths:
           name: teamName
           schema:
             type: string
-          description: Case-insensitive partial match on team name
+          description: Case-insensitive prefix match on team name
       responses:
         "200":
           description: Teams retrieved successfully
