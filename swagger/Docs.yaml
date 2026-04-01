@@ -820,9 +820,22 @@ components:
     UploadResponse:
       type: object
       properties:
+        id:
+          type: string
+          description: Stable image identifier currently equal to the public URL.
         url:
           type: string
           description: URL of the uploaded file
+        key:
+          type: string
+          description: Storage key written to Cloudflare R2.
+        type:
+          type: string
+          enum:
+            - fullRobot
+            - driveTrain
+            - intake
+          description: Upload category accepted by the backend.
     EventResponse:
       type: object
       properties:
@@ -883,8 +896,26 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/ImageData"
+            intakeImages:
+              type: array
+              items:
+                $ref: "#/components/schemas/ImageData"
         userData:
           type: object
+          properties:
+            email:
+              type: string
+            avatar:
+              type: string
+            userId:
+              type: string
+            username:
+              type: string
+            displayName:
+              type: string
+        user_data:
+          type: object
+          description: Legacy alias accepted by the backend when userData is absent.
           properties:
             email:
               type: string
@@ -2988,7 +3019,7 @@ paths:
   /upload/upload:
     post:
       summary: Upload a file
-      description: Upload an image file to the server
+      description: Upload a pit scouting image to Cloudflare R2. Accepted upload categories are fullRobot, driveTrain, and intake.
       tags:
         - Uploads
       security:
@@ -3007,7 +3038,11 @@ paths:
                   description: File to upload
                 type:
                   type: string
-                  description: Type of upload (e.g., 'robots', 'drivetrain')
+                  enum:
+                    - fullRobot
+                    - driveTrain
+                    - intake
+                  description: Pit scouting upload category.
       responses:
         "200":
           description: File uploaded successfully
@@ -3026,6 +3061,9 @@ paths:
                   value:
                     success: false
                     message: Bad request
+                InvalidUploadType:
+                  value:
+                    error: Invalid upload type
         "401":
           description: Unauthorized
           content:
@@ -3062,7 +3100,7 @@ paths:
   /upload/images/{imageId}:
     delete:
       summary: Delete an image
-      description: Delete an uploaded image by ID
+      description: Delete an uploaded pit scouting image. The path parameter can be the encoded public image URL or the identifier returned by the upload endpoint.
       tags:
         - Uploads
       security:
@@ -3075,7 +3113,7 @@ paths:
           required: true
           schema:
             type: string
-          description: ID of the image to delete
+          description: Encoded image identifier, typically the public URL returned during upload.
       responses:
         "200":
           description: Image deleted successfully
@@ -3243,7 +3281,7 @@ paths:
   /survey/submit:
     post:
       summary: Submit survey response
-      description: Submit a new survey response for an event
+      description: Submit a new survey response for an event, including pit scouting image groups for full robot, drivetrain, and intake photos.
       tags:
         - Surveys
       security:
@@ -3333,8 +3371,7 @@ paths:
           name: teamNumber
           schema:
             type: string
-          description: Preferred team number filter. Compared against data.teamNumber
-            after JSON string normalization.
+          description: Preferred team number filter. Compared against the stored survey payload and supports the current frontend key `"Team number"` plus legacy keys `teamNumber` and `team_number`.
         - in: query
           name: teamnumber
           schema:

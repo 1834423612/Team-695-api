@@ -20,6 +20,7 @@ interface ImageData {
 interface Images {
     fullRobotImages: ImageData[];
     driveTrainImages: ImageData[];
+    intakeImages?: ImageData[];
 }
 
 const getQueryValue = (query: Record<string, any>, keys: string[]) => {
@@ -41,6 +42,12 @@ const getQueryValue = (query: Record<string, any>, keys: string[]) => {
     return undefined;
 }
 
+const normalizeImages = (images?: Partial<Images> | null): Images => ({
+    fullRobotImages: Array.isArray(images?.fullRobotImages) ? images.fullRobotImages : [],
+    driveTrainImages: Array.isArray(images?.driveTrainImages) ? images.driveTrainImages : [],
+    intakeImages: Array.isArray(images?.intakeImages) ? images.intakeImages : [],
+});
+
 // Apply verifyToken middleware to routes requiring authentication
 router.use('/submit', verifyToken);
 router.use('/query', verifyToken);
@@ -50,30 +57,30 @@ router.use('/query', verifyToken);
     Call submission API: Use POST method to call /api/survey/submit endpoint with the following parameters:
         eventId: string; // Event ID
         tabs: Tab[]; // Form data array, each form contains formId and formData
-        images: Images; // Image data, containing fullRobotImages and driveTrainImages
+        images: Images; // Image data, containing fullRobotImages, driveTrainImages, and intakeImages
         userData: { email: string; avatar: string; userId: string; username: string; displayName: string; }; // User Data, Including email, avatar, userId, username and displayName
         deviceInfo: any; // Device info, including userAgent, ip and language
 */
 router.post('/submit', async (req, res) => {
-    const { eventId, tabs, images, userData, deviceInfo }: { 
+    const { eventId, tabs, images, userData, user_data, deviceInfo }: { 
         eventId: string; 
         tabs: Tab[]; 
         images: Images; 
         userData: { email: string; avatar: string; userId: string; username: string; displayName: string; };
+        user_data?: { email: string; avatar: string; userId: string; username: string; displayName: string; };
         deviceInfo: any; 
     } = req.body;
 
     try {
+        const normalizedImages = normalizeImages(images);
+        const normalizedUserData = userData || user_data || {};
+        const { userAgent = '', ip = '', language = '' } = deviceInfo || {};
+
         for (const tab of tabs) {
             const formData = tab.formData.reduce((acc: any, field: any) => {
                 acc[field.question] = field.value;
                 return acc;
             }, {});
-
-            // Ensure images data exists
-            const tabImages = images || { fullRobotImages: [], driveTrainImages: [] };
-
-            const { userAgent, ip, language } = deviceInfo;
 
             await pool.query(
                 'INSERT INTO survey_responses (event_id, form_id, data, upload, user_data, user_agent, ip, language, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
@@ -81,8 +88,8 @@ router.post('/submit', async (req, res) => {
                     eventId, 
                     tab.formId, 
                     JSON.stringify(formData), 
-                    JSON.stringify(tabImages), 
-                    JSON.stringify(userData),
+                    JSON.stringify(normalizedImages), 
+                    JSON.stringify(normalizedUserData),
                     userAgent, 
                     ip, 
                     language
@@ -129,7 +136,7 @@ router.get('/query', async (req, res) => {
     }
 
     if (teamNumber) {
-        query += ' AND JSON_UNQUOTE(JSON_EXTRACT(data, "$.teamNumber")) = ?';
+        query += ' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data, \'$."Team number"\')), JSON_UNQUOTE(JSON_EXTRACT(data, "$.teamNumber")), JSON_UNQUOTE(JSON_EXTRACT(data, "$.team_number"))) = ?';
         queryParams.push(String(teamNumber));
     }
 

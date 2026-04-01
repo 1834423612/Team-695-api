@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { requireAdmin } from '../middlewares/auth';
 import { S3Client, PutObjectCommand, ObjectCannedACL, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +13,7 @@ const router = express.Router();
 // Configure multer storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+const allowedUploadTypes = new Set(['fullRobot', 'driveTrain', 'intake']);
 
 // Configure S3 client
 const s3Client = new S3Client({
@@ -25,6 +25,55 @@ const s3Client = new S3Client({
     },
 });
 
+const normalizeImageIdentifier = (value: string): string => {
+    const decodedValue = decodeURIComponent(value);
+
+    if (decodedValue.startsWith('http://') || decodedValue.startsWith('https://')) {
+        return decodedValue;
+    }
+
+    if (decodedValue.startsWith('/')) {
+        return `${process.env.CUSTOM_DOMAIN}${decodedValue}`;
+    }
+
+    return `${process.env.CUSTOM_DOMAIN}/${decodedValue}`;
+};
+
+const getFileKeyFromImageUrl = (imageUrl: string): string | null => {
+    const prefix = `${process.env.CUSTOM_DOMAIN}/`;
+
+    if (!imageUrl.startsWith(prefix)) {
+        return null;
+    }
+
+    return imageUrl.slice(prefix.length);
+};
+
+const parseUploadPayload = (uploadValue: unknown) => {
+    if (!uploadValue) {
+        return { fullRobotImages: [], driveTrainImages: [], intakeImages: [] as any[] };
+    }
+
+    if (typeof uploadValue === 'string') {
+        try {
+            return parseUploadPayload(JSON.parse(uploadValue));
+        } catch {
+            return { fullRobotImages: [], driveTrainImages: [], intakeImages: [] as any[] };
+        }
+    }
+
+    if (typeof uploadValue !== 'object' || Array.isArray(uploadValue)) {
+        return { fullRobotImages: [], driveTrainImages: [], intakeImages: [] as any[] };
+    }
+
+    const record = uploadValue as Record<string, unknown>;
+    return {
+        fullRobotImages: Array.isArray(record.fullRobotImages) ? record.fullRobotImages : [],
+        driveTrainImages: Array.isArray(record.driveTrainImages) ? record.driveTrainImages : [],
+        intakeImages: Array.isArray(record.intakeImages) ? record.intakeImages : [],
+    };
+};
+
 // Upload image to Cloudflare R2 (requires authentication)
 router.post('/upload', verifyToken, upload.single('file'), async (req: Request, res: Response) => {
     try {
@@ -33,6 +82,9 @@ router.post('/upload', verifyToken, upload.single('file'), async (req: Request, 
         }
 
         const { type } = req.body;
+        if (typeof type !== 'string' || !allowedUploadTypes.has(type)) {
+            return res.status(400).json({ error: 'Invalid upload type' });
+        }
 
         // Fetch the latest eventId from database
         const [rows]: any = await pool.query('SELECT event_id FROM events ORDER BY event_date DESC LIMIT 1');
@@ -59,7 +111,7 @@ router.post('/upload', verifyToken, upload.single('file'), async (req: Request, 
         await s3Client.send(command);
 
         const fileUrl = `${process.env.CUSTOM_DOMAIN}/${fileKey}`;
-        res.status(200).json({ url: fileUrl });
+        res.status(200).json({ id: fileUrl, url: fileUrl, key: fileKey, type });
     } catch (error) {
         console.error('Error uploading image:', error);
         res.status(500).json({ error: 'Failed to upload image' });
@@ -67,22 +119,16 @@ router.post('/upload', verifyToken, upload.single('file'), async (req: Request, 
 });
 
 // Delete image API
-router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Response) => {
+router.delete('/images/:imageId', verifyToken, async (req: Request, res: Response) => {
     const { imageId } = req.params;
 
     try {
-        // Get image URL from database
-        const [rows]: any = await pool.query('SELECT upload FROM survey_responses WHERE JSON_CONTAINS(upload, ?)', [JSON.stringify({ url: imageId })]);
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Image not found' });
-        }
+        const imageUrl = normalizeImageIdentifier(imageId);
+        const fileKey = getFileKeyFromImageUrl(imageUrl);
 
-        const imageUrl = rows[0].upload.fullRobotImages.find((img: any) => img.url === imageId) || rows[0].upload.driveTrainImages.find((img: any) => img.url === imageId);
-        if (!imageUrl) {
-            return res.status(404).json({ error: 'Image not found in the specified type' });
+        if (!fileKey) {
+            return res.status(400).json({ error: 'Invalid image identifier' });
         }
-
-        const fileKey = imageUrl.url.split(`${process.env.CUSTOM_DOMAIN}/`)[1];
 
         // Delete image from Cloudflare R2
         const deleteParams = {
@@ -93,8 +139,25 @@ router.delete('/images/:imageId', requireAdmin, async (req: Request, res: Respon
         const deleteCommand = new DeleteObjectCommand(deleteParams);
         await s3Client.send(deleteCommand);
 
-        // Delete image record from database
-        await pool.query('UPDATE survey_responses SET upload = JSON_REMOVE(upload, ?) WHERE JSON_CONTAINS(upload, ?)', [`$.fullRobotImages[${rows[0].upload.fullRobotImages.indexOf(imageUrl)}]`, JSON.stringify({ url: imageId })]);
+        // Best-effort cleanup in stored survey responses.
+        const [rows]: any = await pool.query(
+            'SELECT id, upload FROM survey_responses WHERE JSON_SEARCH(CAST(upload AS CHAR), "one", ?) IS NOT NULL',
+            [imageUrl]
+        );
+
+        for (const row of rows) {
+            const parsedUpload = parseUploadPayload(row.upload);
+            const nextUpload = {
+                fullRobotImages: parsedUpload.fullRobotImages.filter((img: any) => img?.url !== imageUrl),
+                driveTrainImages: parsedUpload.driveTrainImages.filter((img: any) => img?.url !== imageUrl),
+                intakeImages: parsedUpload.intakeImages.filter((img: any) => img?.url !== imageUrl),
+            };
+
+            await pool.query(
+                'UPDATE survey_responses SET upload = ? WHERE id = ?',
+                [JSON.stringify(nextUpload), row.id]
+            );
+        }
 
         res.status(200).json({ message: 'Image deleted successfully' });
     } catch (error) {

@@ -356,8 +356,8 @@ The documentation provides:
 - `GET /api/webhook/status` - Webhook status
 
 #### Image Upload
-- `POST /api/upload` - Upload image
-- `DELETE /api/upload/images/:filename` - Delete image (authenticated)
+- `POST /api/upload/upload` - Upload pit scouting image (`fullRobot`, `driveTrain`, `intake`)
+- `DELETE /api/upload/images/:imageId` - Delete uploaded image (authenticated)
 
 ## Module Overview
 
@@ -444,12 +444,20 @@ The documentation provides:
 - Unique filename generation
 - S3-compatible storage
 - Custom domain support
+- Supports pit scouting categories `fullRobot`, `driveTrain`, and `intake`
+- Upload response returns both a public `url` and a stable `id` value used by the frontend for deletion
 
 **Upload Flow**:
-1. Client uploads image via POST `/api/upload`
-2. File validated (type, size)
+1. Client uploads image via POST `/api/upload/upload`
+2. Backend validates upload type (`fullRobot`, `driveTrain`, or `intake`) and attached file
 3. Stored in R2 bucket with unique name
-4. Returns public URL
+4. Returns public URL plus an image identifier for follow-up delete requests
+
+**Delete Flow**:
+1. Client issues DELETE `/api/upload/images/:imageId`
+2. `imageId` can be the encoded public image URL or the resolved image identifier returned by upload
+3. Backend deletes the object from R2
+4. Backend removes matching references from `survey_responses.upload.fullRobotImages`, `driveTrainImages`, and `intakeImages`
 
 ### 6. Database Service (`config/database.ts`)
 
