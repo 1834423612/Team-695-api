@@ -150,6 +150,7 @@ app.use((req, res, next) => {
 
 // Body parser middleware configuration
 app.use(bodyParser.json({
+    limit: "50mb",
     verify: (req: any, res, buf) => {
         // Save raw request body for HMAC verification
         req.rawBody = buf.toString();
